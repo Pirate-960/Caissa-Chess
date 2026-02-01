@@ -1,0 +1,26 @@
+{
+  "sicilian_najdorf": {
+    "eco": "B90",
+    "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6"],
+    "era": "modern",
+    "notes": "Flexible defense, hypermodern ideas"
+  },
+  "ruy_lopez": {
+    "eco": "C80",
+    "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5"],
+    "era": "classical",
+    "notes": "The Spanish, most popular classical opening"
+  },
+  "french_defense": {
+    "eco": "C00",
+    "moves": ["e4", "e6"],
+    "era": "semi-closed",
+    "notes": "Solid, positional defense"
+  },
+  "king_indian_attack": {
+    "eco": "A07",
+    "moves": ["Nf3", "d5", "g3", "c5", "Bg2", "cxd4", "Nxd4"],
+    "era": "hypermodern",
+    "notes": "Fianchetto setup, control from distance"
+  }
+}
