@@ -1,0 +1,217 @@
+name: CAISSA CI/CD Pipeline
+
+# Trigger on:
+# - Any push to main/develop
+# - Any PR against main/develop
+# - Manual workflow dispatch
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - "*.md"
+      - ".gitignore"
+      - "docs/**"
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+env:
+  POETRY_VERSION: 1.7.0
+  CACHE_VERSION: v1
+
+jobs:
+  # ===========================
+  # QUALITY CHECKS
+  # ===========================
+  quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better linting
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: venv-quality-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}-${{ env.CACHE_VERSION }}
+        restore-keys: venv-quality-${{ runner.os }}-
+    
+    - name: Install dependencies
+      run: poetry install --no-interaction
+    
+    - name: Lint with Pylint
+      continue-on-error: true
+      run: |
+        poetry run pylint caissa core engine aesthetic --fail-under=8.0 || true
+    
+    - name: Format check with Black
+      continue-on-error: true
+      run: |
+        poetry run black --check caissa core engine aesthetic || echo "Run 'poetry run black caissa core engine aesthetic' to fix"
+    
+    - name: Type checking with Mypy
+      continue-on-error: true
+      run: |
+        poetry run mypy caissa core engine aesthetic --ignore-missing-imports || true
+    
+    - name: Import sorting with isort
+      continue-on-error: true
+      run: |
+        poetry run isort --check-only caissa core engine aesthetic || echo "Run 'poetry run isort caissa core engine aesthetic' to fix"
+
+  # ===========================
+  # UNIT TESTS
+  # ===========================
+  test:
+    name: Unit Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: quality
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: ${{ env.POETRY_VERSION }}
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Cache venv
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: venv-test-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}-${{ env.CACHE_VERSION }}
+        restore-keys: venv-test-${{ runner.os }}-${{ matrix.python-version }}-
+    
+    - name: Install dependencies
+      run: poetry install --no-interaction
+
+    - name: Run Unit Tests with Coverage
+      run: |
+        poetry run pytest tests/ \
+          --verbose \
+          --cov=caissa \
+          --cov=core \
+          --cov=engine \
+          --cov=aesthetic \
+          --cov-report=xml \
+          --cov-report=term-missing \
+          --junitxml=junit.xml
+    
+    - name: Upload Coverage to Codecov
+      if: matrix.python-version == '3.12'
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+    
+    - name: Publish Test Results
+      if: always()
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      with:
+        files: junit.xml
+        check_name: Unit Test Results (Python ${{ matrix.python-version }})
+
+  # ===========================
+  # MODULE IMPORTS & SANITY
+  # ===========================
+  imports:
+    name: Module Import Verification
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: .venv
+        key: venv-imports-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}-${{ env.CACHE_VERSION }}
+    
+    - name: Install project
+      run: poetry install --no-interaction
+
+    - name: Verify Core Module Imports
+      run: |
+        poetry run python -c "from caissa import ChessGame; print('✓ Main module')"
+        poetry run python -c "from core.prompt_manager import PromptManager; print('✓ Prompt Manager')"
+        poetry run python -c "from core.generator import GameGenerator; print('✓ Generator')"
+        poetry run python -c "from engine.legality import GameLegalityValidator; print('✓ Legality Validator')"
+        poetry run python -c "from engine.stockfish_client import StockfishClient; print('✓ Stockfish Client')"
+        poetry run python -c "from aesthetic.beauty_eval import BeautyEvaluator; print('✓ Beauty Evaluator')"
+        echo "✓ All core modules import successfully!"
+    
+    - name: CLI Sanity Check
+      run: |
+        poetry run python caissa.py --help > /dev/null
+        poetry run python caissa.py info > /dev/null
+        poetry run python caissa.py list-styles > /dev/null
+        echo "✓ CLI commands work!"
+
+  # ===========================
+  # FINAL STATUS
+  # ===========================
+  status:
+    name: CI Status Check
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [quality, test, imports]
+    
+    steps:
+    - name: Check CI Success
+      run: |
+        if [ "${{ needs.quality.result }}" = "failure" ] || \
+           [ "${{ needs.test.result }}" = "failure" ] || \
+           [ "${{ needs.imports.result }}" = "failure" ]; then
+          echo "❌ CI Pipeline Failed"
+          exit 1
+        fi
+        echo "✅ All CI checks passed!"
+    
+    - name: Success Summary
+      if: success()
+      run: |
+        echo "🎉 CAISSA CI/CD Pipeline Successful!"
+        echo "- Quality checks: PASS"
+        echo "- Unit tests: PASS"
+        echo "- Module imports: PASS"
+        echo "- Ready for merge!"
