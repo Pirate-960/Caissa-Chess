@@ -5,7 +5,9 @@ Install anthropic using poetry and run tests.
 import os
 import subprocess
 
-os.chdir(r"d:\Github Projects\Games\Chess\caissa-chess")
+# Change to project root (use current script's directory)
+project_root = os.path.dirname(os.path.abspath(__file__))
+os.chdir(project_root)
 
 print("=" * 60)
 print("Installing anthropic package via poetry...")
