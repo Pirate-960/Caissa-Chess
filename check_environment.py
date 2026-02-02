@@ -4,6 +4,7 @@ Check if anthropic is installed and attempt to import it.
 """
 
 import sys
+import os
 import importlib.util
 
 print("=" * 60)
@@ -28,8 +29,11 @@ packages_to_check = [
 ]
 
 for pkg in packages_to_check:
-    spec = importlib.util.find_spec(pkg)
-    status = "✓ INSTALLED" if spec is not None else "✗ NOT FOUND"
+    try:
+        spec = importlib.util.find_spec(pkg)
+        status = "✓ INSTALLED" if spec is not None else "✗ NOT FOUND"
+    except (ModuleNotFoundError, ValueError):
+        status = "✗ NOT FOUND"
     print(f"{pkg:25} {status}")
 
 print("\n" + "=" * 60)
@@ -37,8 +41,9 @@ print("Attempting to import test module...")
 print("=" * 60)
 
 try:
-    # Add project to path
-    sys.path.insert(0, r"d:\Github Projects\Games\Chess\caissa-chess")
+    # Add project to path (use current script's directory as project root)
+    project_root = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, project_root)
     
     from tests.test_multi_providers import (
         TestAnthropicProvider,
