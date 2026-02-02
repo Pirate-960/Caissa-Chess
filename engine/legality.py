@@ -125,11 +125,6 @@ class LegalityValidator:
             # Extract all move tokens from movetext
             extracted_moves = self._extract_moves_from_pgn(movetext)
             
-            # Debug: print extracted moves
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.debug(f"Extracted moves: {extracted_moves}")
-            
             # Validate each move manually
             temp_board = chess.Board()
             for i, move_str in enumerate(extracted_moves):
@@ -139,20 +134,17 @@ class LegalityValidator:
                         errors.append(f"Move {i+1}: '{move_str}' is illegal")
                         return False, errors
                     temp_board.push(move)
-                except chess.InvalidMoveError as e:
-                    errors.append(f"Move {i+1}: '{move_str}' is an invalid move: {e}")
+                except chess.InvalidMoveError:
+                    errors.append(f"Move {i+1}: '{move_str}' is an invalid move")
                     return False, errors
-                except chess.IllegalMoveError as e:
-                    errors.append(f"Move {i+1}: '{move_str}' is an illegal move: {e}")
+                except chess.IllegalMoveError:
+                    errors.append(f"Move {i+1}: '{move_str}' is an illegal move")
                     return False, errors
-                except chess.AmbiguousMoveError as e:
-                    errors.append(f"Move {i+1}: '{move_str}' is ambiguous: {e}")
+                except chess.AmbiguousMoveError:
+                    errors.append(f"Move {i+1}: '{move_str}' is ambiguous")
                     return False, errors
                 except ValueError as e:
                     errors.append(f"Move {i+1}: '{move_str}' parse error: {e}")
-                    return False, errors
-                except Exception as e:
-                    errors.append(f"Move {i+1}: '{move_str}' unexpected error: {e}")
                     return False, errors
 
         return True, errors

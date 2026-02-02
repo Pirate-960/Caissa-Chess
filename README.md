@@ -8,15 +8,6 @@ CAISSA is a Generative Adversarial-Cooperative Pipeline (GACP) that combines Lar
 
 Unlike traditional engines that optimize for a single metric (strength), CAISSA optimizes for **Beauty**: the intersection of tactical soundness, strategic coherence, and aesthetic brilliance.
 
-## 📚 Documentation
-
-Quick links to comprehensive documentation:
-- **[SETUP.md](docs/SETUP.md)** - Installation guide & API configuration for all 6 providers
-- **[PROVIDERS.md](docs/PROVIDERS.md)** - Complete multi-provider guide (OpenAI, Anthropic, Azure, Google Gemini, Ollama, Mock)
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System design & technical deep dive
-- **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Contributing guidelines & code standards
-- **[ROADMAP.md](docs/ROADMAP.md)** - Project vision, timeline & future features
-
 ## 🏗️ Architecture Overview
 
 ```mermaid
@@ -63,14 +54,12 @@ Caissa-Chess/
 
 ## ✨ Features
 
-- **🌐 Multi-Provider Support**: Use OpenAI, Anthropic (Claude), Azure OpenAI, Google Gemini, or run 100% FREE & PRIVATE with local models via Ollama
-- **🎨 LLM-Powered Generation**: Uses advanced AI to propose creative, high-entropy moves
-- **✅ Legality Enforcement**: Every move validated through `python-chess`
-- **🔄 Self-Correction Loop**: Automatically detects and fixes illegal moves with retry logic
-- **💎 Beauty Metrics**: Mathematical scoring of aesthetic qualities
-- **🎭 Style Injection**: Generate games in historical styles (Romantic, Hypermodern, Neural)
-- **📝 GM Commentary**: Auto-annotation explaining brilliant and curious moves
-- **📦 PGN Export**: Professional publication-ready format
+- **LLM-Powered Generation**: Uses Claude/OpenAI to propose high-entropy moves
+- **Legality Enforcement**: Every move validated through `python-chess`
+- **Beauty Metrics**: Mathematical scoring of aesthetic qualities
+- **Style Injection**: Generate games in historical styles (Romantic, Hypermodern, Neural)
+- **GM Commentary**: Auto-annotation explaining brilliant and curious moves
+- **PGN Export**: Professional publication-ready format
 
 ## 🚀 Quick Start
 
@@ -78,32 +67,9 @@ Caissa-Chess/
 # Install dependencies
 poetry install
 
-# Set up your preferred provider (choose one):
-export OPENAI_API_KEY='sk-...'              # For OpenAI (GPT-4)
-export ANTHROPIC_API_KEY='sk-ant-...'      # For Anthropic (Claude)
-# OR use Ollama for FREE local models (see MULTI_PROVIDER_GUIDE.md)
-
-# Run the demo script
-python script_multi_provider_demo.py
-
-# Or generate programmatically:
-from core.llm_provider import OpenAIProvider  # or AnthropicProvider, OllamaProvider
-from core.generator import GameGenerator
-from core.prompt_manager import PromptManager
-
-provider = OpenAIProvider(model="gpt-4")
-prompt_manager = PromptManager()
-generator = GameGenerator(provider, prompt_manager)
-
-game = generator.generate_game(
-    aesthetic_goal="Romantic attacking chess with sacrifices",
-    move_limit=15
-)
-
-print(game.pgn_str)
+# Generate a game (example)
+python -m caissa.core.generator --style romantic --theme "Queen Sacrifice"
 ```
-
-**💡 See [PROVIDERS.md](docs/PROVIDERS.md) for detailed setup of all 6 LLM providers!**
 
 ## 💎 The Beauty Score Formula
 
@@ -122,14 +88,11 @@ See `docs/beauty_metric.md` for the full mathematical framework.
 
 ## 📋 Development Roadmap
 
-See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
-
-**Current Status**: 
-- ✅ **v0.1**: Core generation pipeline (legality validation)
-- ✅ **v0.2**: Multi-provider LLM support (6 providers with 26/26 tests passing)
-- 🚀 **v0.3**: Stockfish integration (in progress)
-- 📋 **v0.5**: Advanced quality & analysis features
-- 🎯 **v1.0**: Production-ready web interface
+- [ ] **v0.1**: Core generation pipeline (legality validation)
+- [ ] **v0.2**: Beauty scoring algorithm
+- [ ] **v0.3**: CLI tool for game generation
+- [ ] **v0.5**: "Turing Test" mode
+- [ ] **v1.0**: Web interface with visualization
 
 ## 🔬 Research Applications
 
