@@ -44,12 +44,12 @@ def check_stockfish() -> str | None:
     return None
 
 
-def get_download_url() -> str:
+def get_download_url() -> tuple[str, str]:
     """
     Get appropriate Stockfish download URL for current system.
     
     Returns:
-        Download URL for the latest Stockfish release
+        Tuple of (download URL, filename) for the latest Stockfish release
     
     Raises:
         ValueError: If platform is not supported
@@ -57,63 +57,123 @@ def get_download_url() -> str:
     system = platform.system()
     arch = platform.machine()
     
-    base_url = "https://github.com/official-stockfish/Stockfish/releases/download/sf16"
+    # Stockfish 17 release (January 2025)
+    # Downloads are now ZIP files that need extraction
+    base_url = "https://github.com/official-stockfish/Stockfish/releases/download/sf_17"
     
     if system == "Windows":
-        return f"{base_url}/stockfish-windows-x86_64-avx2.exe"
+        # Windows releases are ZIP archives
+        return (f"{base_url}/stockfish-windows-x86-64-avx2.zip", "stockfish-windows-x86-64-avx2.exe")
     elif system == "Darwin":  # macOS
         if arch == "arm64":
-            return f"{base_url}/stockfish-macos-m1-apple-silicon"
+            return (f"{base_url}/stockfish-macos-m1-apple-silicon.tar", "stockfish")
         else:
-            return f"{base_url}/stockfish-macos-x86-64"
+            return (f"{base_url}/stockfish-macos-x86-64-avx2.tar", "stockfish")
     elif system == "Linux":
-        return f"{base_url}/stockfish-ubuntu-x86_64-avx2"
+        return (f"{base_url}/stockfish-ubuntu-x86-64-avx2.tar", "stockfish")
     else:
         raise ValueError(f"Unsupported platform: {system} ({arch})")
 
 
-def download_stockfish(url: str, destination: Path) -> bool:
+def download_stockfish(url: str, destination: Path, binary_name: str) -> bool:
     """
-    Download Stockfish binary from official release.
+    Download and extract Stockfish binary from official release.
     
     Args:
-        url: Download URL
-        destination: Where to save the binary
+        url: Download URL (ZIP or TAR archive)
+        destination: Directory where to save the binary
+        binary_name: Name of the executable inside the archive
     
     Returns:
         True if successful, False otherwise
     """
+    import tempfile
+    import zipfile
+    import tarfile
+    
     print(f"📥 Downloading Stockfish from: {url}")
     
     try:
         import urllib.request
-        urllib.request.urlretrieve(url, destination)
         
-        # Make executable on Unix
-        if platform.system() != "Windows":
-            os.chmod(destination, 0o755)
+        # Download to temp file first
+        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(url).suffix) as tmp:
+            tmp_path = Path(tmp.name)
         
-        print(f"✅ Downloaded to: {destination}")
+        urllib.request.urlretrieve(url, tmp_path)
+        print(f"📦 Downloaded archive: {tmp_path}")
+        
+        # Create destination directory
+        destination.mkdir(parents=True, exist_ok=True)
+        
+        # Extract based on file type
+        if url.endswith('.zip'):
+            print("📂 Extracting ZIP archive...")
+            with zipfile.ZipFile(tmp_path, 'r') as zf:
+                # Find the stockfish executable in the archive
+                for name in zf.namelist():
+                    if name.endswith('.exe') or (name.endswith('stockfish') and '/' in name):
+                        # Extract to destination
+                        extracted_path = zf.extract(name, destination)
+                        final_path = destination / binary_name
+                        # Move to final location if needed
+                        if Path(extracted_path) != final_path:
+                            shutil.move(extracted_path, final_path)
+                        print(f"✅ Extracted to: {final_path}")
+                        break
+                else:
+                    # Just extract the stockfish folder
+                    zf.extractall(destination)
+                    # Find the exe
+                    for f in destination.rglob("*.exe"):
+                        if "stockfish" in f.name.lower():
+                            final_path = destination / binary_name
+                            shutil.move(f, final_path)
+                            print(f"✅ Extracted to: {final_path}")
+                            break
+        
+        elif url.endswith('.tar') or url.endswith('.tar.gz'):
+            print("📂 Extracting TAR archive...")
+            with tarfile.open(tmp_path, 'r:*') as tf:
+                tf.extractall(destination)
+                # Find stockfish binary
+                for f in destination.rglob("stockfish"):
+                    if f.is_file():
+                        final_path = destination / binary_name
+                        if f != final_path:
+                            shutil.move(f, final_path)
+                        os.chmod(final_path, 0o755)
+                        print(f"✅ Extracted to: {final_path}")
+                        break
+        
+        # Clean up temp file
+        tmp_path.unlink(missing_ok=True)
+        
+        # Clean up empty directories from extraction
+        for item in destination.iterdir():
+            if item.is_dir() and item.name.startswith("stockfish"):
+                shutil.rmtree(item, ignore_errors=True)
+        
         return True
     
     except ImportError:
         # Try using curl if urllib not available
         print("⚠️  Using curl to download...")
         try:
-            result = subprocess.run(
-                ["curl", "-L", "-o", str(destination), url],
+            subprocess.run(
+                ["curl", "-L", "-o", str(destination / "stockfish.zip"), url],
                 check=True
             )
-            if platform.system() != "Windows":
-                os.chmod(destination, 0o755)
-            print(f"✅ Downloaded to: {destination}")
-            return True
+            print("⚠️  Please manually extract the archive")
+            return False
         except Exception as e:
             print(f"❌ Download failed: {str(e)}")
             return False
     
     except Exception as e:
         print(f"❌ Download failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -273,24 +333,27 @@ def main():
     
     if choice == "1":
         try:
-            url = get_download_url()
+            url, binary_name = get_download_url()
             print(f"\n📋 Platform: {platform.system()} ({platform.machine()})")
             
-            # Download to current directory or standard location
-            if platform.system() == "Windows":
-                dest = Path("./stockfish.exe")
-            else:
-                dest = Path("./stockfish")
+            # Download to engines directory
+            engines_dir = Path("./engines")
+            engines_dir.mkdir(exist_ok=True)
             
-            if download_stockfish(url, dest):
-                add_to_path_env(str(dest))
+            if download_stockfish(url, engines_dir, binary_name):
+                binary_path = engines_dir / binary_name
+                add_to_path_env(str(binary_path.absolute()))
                 setup_env()
                 
-                if validate_installation():
+                # Try to validate
+                print(f"\n🔍 Checking installation...")
+                if binary_path.exists():
+                    print(f"✅ Binary exists at: {binary_path.absolute()}")
                     print("\n✅ Setup complete! Stockfish is ready for use.")
+                    print(f"\n💡 To use: Set STOCKFISH_PATH={binary_path.absolute()}")
                     return 0
                 else:
-                    print("\n⚠️  Downloaded but validation failed")
+                    print("\n⚠️  Downloaded but binary not found")
                     return 1
             else:
                 return 1
