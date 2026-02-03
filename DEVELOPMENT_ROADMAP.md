@@ -2,10 +2,10 @@
 
 > **📖 Quick Reference** | For the comprehensive roadmap, see **[docs/ROADMAP.md](docs/ROADMAP.md)**
 
-**Project Status**: `v0.3.0 - Stockfish Integration + Phase 3.1 Enhancements Complete`  
-**Previous**: `v0.2.0 - Multi-Provider LLM Integration Complete`
+**Project Status**: `v0.3.2 - Phase 3.2+ Enhanced Benchmarking Complete`  
+**Previous**: `v0.3.1 - Phase 3.2 Quality & Testing Complete`
 **Last Updated**: February 2026
-**Tests**: 63 passing ✅
+**Tests**: 250+ passing ✅
 
 ---
 
@@ -159,12 +159,47 @@ python caissa.py generate --style romantic --aggression 8 --output game.pgn
 - [x] **Move Quality Hints**: Classification, tactical motifs, quality scores
 - [x] **Advanced Legality**: Candidate moves, repair suggestions
 
-### v0.3.1 🚀 - Quality & Testing (IN PROGRESS)
-- [ ] Live API testing for all providers
-- [ ] Response quality benchmarking
-- [ ] Performance/latency metrics
-- [ ] Cost analysis per provider
-- [ ] End-to-end generation tests
+### v0.3.1 ✅ - Quality & Testing (COMPLETE)
+- [x] Live API testing for all providers (`tests/test_live_providers.py`)
+- [x] Response quality benchmarking (`benchmarks/provider_benchmark.py`)
+- [x] Performance/latency metrics (LatencyMetrics, ProviderMetrics)
+- [x] Cost analysis per provider (CostEstimate, MODEL_PRICING)
+- [x] End-to-end generation tests (`tests/test_e2e_generation.py`)
+
+**Phase 3.2 Features**:
+- [x] **TokenUsage** - Track input/output tokens
+- [x] **CostEstimate** - USD cost estimation per call
+- [x] **GenerationMetrics** - Full metrics per LLM call
+- [x] **ProviderMetrics** - Aggregate metrics across calls
+- [x] `generate_with_metrics()` - New method for tracked generation
+- [x] **BenchmarkEngine** - Multi-provider benchmarking
+- [x] **LatencyMetrics** - Min/max/mean/median/p95/p99
+
+### v0.3.2 ✅ - Enhanced Benchmarking (Phase 3.2+) (COMPLETE)
+- [x] Rich console output with colors, charts, and progress bars (`benchmarks/rich_console.py`)
+- [x] Quality scoring system for generated games (`benchmarks/quality_analyzer.py`)
+- [x] Benchmark history and trend analysis (`benchmarks/benchmark_history.py`)
+- [x] HTML/Markdown report generation (`benchmarks/report_generator.py`)
+- [x] Regression detection and alerts
+- [x] Statistical analysis (confidence intervals, effect sizes)
+- [x] Provider recommendations engine
+
+**Phase 3.2+ Features**:
+- [x] **ProgressBar** - ASCII progress bars with live updates
+- [x] **Table** - Rich ASCII tables with color support
+- [x] **sparkline()** - Inline sparkline charts
+- [x] **histogram()** - ASCII histogram visualization
+- [x] **QualityAnalyzer** - Multi-dimensional game scoring (legality, tactical, aesthetic, structural)
+- [x] **QualityReport** - Detailed quality reports with grades (A+ to F)
+- [x] **BatchQualityAnalyzer** - Aggregate quality across multiple games
+- [x] **BenchmarkHistory** - JSON database for benchmark persistence
+- [x] **TrendData** - Trend analysis over time periods
+- [x] **RegressionAlert** - Automated regression detection
+- [x] **ReportGenerator** - Multi-format report generation
+- [x] **HTMLReportGenerator** - Interactive HTML reports with charts
+- [x] **MarkdownReportGenerator** - GitHub-ready Markdown reports
+- [x] **RecommendationEngine** - AI-powered provider recommendations
+- [x] **StatisticalAnalyzer** - Confidence intervals, Cohen's d effect sizes
 
 ### v0.5.0 (Planned) - Quality & Analysis
 - [ ] Turing test mode (distinguish from real games)
@@ -196,7 +231,7 @@ python caissa.py generate --style romantic --aggression 8 --output game.pgn
 | File | Role | Status |
 |------|------|--------|
 | `core/prompt_manager.py` | Creative direction + 15 player personalities | ✅ Complete |
-| `core/llm_provider.py` | Multi-provider LLM abstraction | ✅ Complete (v0.2.0) |
+| `core/llm_provider.py` | Multi-provider LLM + metrics tracking | ✅ Complete (v0.3.1) |
 | `core/generator.py` | Orchestration + batch generation + stats | ✅ Complete |
 | `core/board_state.py` | Board tracking + game phase analysis | ✅ Complete |
 | `engine/legality.py` | Legal enforcement + quality hints | ✅ Complete |
@@ -204,6 +239,14 @@ python caissa.py generate --style romantic --aggression 8 --output game.pgn
 | `aesthetic/beauty_eval.py` | Aesthetic scoring | ✅ Complete |
 | `aesthetic/style_slider.py` | Style presets + blending | ✅ Complete |
 | `export/pgn_builder.py` | PGN/HTML/MD/JSON export | ✅ Complete |
+| `benchmarks/provider_benchmark.py` | Provider benchmarking + cost analysis | ✅ Complete (v0.3.2) |
+| `benchmarks/rich_console.py` | Rich console output + charts | ✅ Complete (v0.3.2) |
+| `benchmarks/quality_analyzer.py` | Multi-dimensional game scoring | ✅ Complete (v0.3.2) |
+| `benchmarks/benchmark_history.py` | Benchmark persistence + trends | ✅ Complete (v0.3.2) |
+| `benchmarks/report_generator.py` | HTML/Markdown report generation | ✅ Complete (v0.3.2) |
+| `tests/test_live_providers.py` | Live API integration tests | ✅ Complete (v0.3.1) |
+| `tests/test_e2e_generation.py` | End-to-end pipeline tests | ✅ Complete (v0.3.1) |
+| `tests/test_phase32_plus.py` | Phase 3.2+ enhancement tests | ✅ Complete (v0.3.2) |
 | `export/markdown_report.py` | Game narrative | ⏳ Pending |
 | `export/gif_generator.py` | Board visualization | ⏳ Pending |
 
@@ -213,6 +256,8 @@ python caissa.py generate --style romantic --aggression 8 --output game.pgn
 
 - **Unit Tests**: Legality validation, beauty scoring, style configuration
 - **Integration Tests**: LLM → Parser → Validator pipeline
+- **Live API Tests**: Real provider tests with `--run-live` flag
+- **Benchmarks**: Performance/latency/cost analysis per provider
 - **Sanity Checks**: No illegal moves, no infinite loops
 - **Turing Tests**: Can humans distinguish from real GM games?
 

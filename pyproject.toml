@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Caissa-Chess"
-version = "0.3.0"
+version = "0.3.2"
 description = "Generative Adversarial-Cooperative Pipeline for Aesthetically Perfect Chess"
 authors = ["CAISSA Collective"]
 readme = "README.md"

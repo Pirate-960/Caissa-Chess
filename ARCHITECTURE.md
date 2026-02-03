@@ -2,9 +2,9 @@
 
 > **📖 Quick Reference** | For the comprehensive architecture guide, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
-**Version**: 3.0  
+**Version**: 3.1  
 **Date**: February 2026  
-**Status**: v0.3.0 - Stockfish Integration + Phase 3.1 Enhancements Complete
+**Status**: v0.3.1 - Phase 3.2 Quality & Testing Complete
 
 ---
 
@@ -610,7 +610,59 @@ Generate games between competing personas:
 
 ---
 
-## 12. Conclusion
+## 12. Phase 3.2 Enhancements Summary
+
+Phase 3.2 adds comprehensive metrics, benchmarking, and end-to-end testing.
+
+### 12.1 Provider Metrics (`core/llm_provider.py`)
+- **CostTier** - FREE, BUDGET, STANDARD, PREMIUM
+- **TokenUsage** - Input/output token tracking
+- **CostEstimate** - USD cost estimation per generation
+- **GenerationMetrics** - Full metrics for each LLM call
+- **ProviderMetrics** - Aggregate metrics for providers
+
+**New Methods**:
+- `generate_with_metrics()` - Generate with full metrics tracking
+- `enable_metrics()` - Enable aggregate metrics collection
+- `get_metrics()` - Get current aggregate metrics
+- `reset_metrics()` - Reset aggregate metrics
+
+**Utility Functions**:
+- `estimate_cost()` - Estimate cost for model/tokens
+- `estimate_tokens()` - Estimate tokens from text
+
+**MODEL_PRICING** - Pricing database for all supported models
+
+### 12.2 Benchmarking (`benchmarks/provider_benchmark.py`)
+- **ProviderPricing** - Cost estimation per model
+- **LatencyMetrics** - Min/max/mean/median/p95/p99 latency
+- **QualityMetrics** - Response quality assessment
+- **BenchmarkResult** - Complete benchmark for one provider
+- **BenchmarkSuite** - Multi-provider benchmark results
+- **BenchmarkEngine** - Run benchmarks with configurable prompts
+
+**CLI Usage**:
+```bash
+python -m benchmarks.provider_benchmark --providers openai,anthropic --runs 5
+python -m benchmarks.provider_benchmark --all --output results.json
+```
+
+### 12.3 Live Provider Testing (`tests/test_live_providers.py`)
+- Tests for OpenAI, Anthropic, Azure, Gemini, Ollama
+- Skipped in CI (requires `--run-live` flag)
+- Provider comparison tests
+- Response quality validation
+
+### 12.4 End-to-End Testing (`tests/test_e2e_generation.py`)
+- Full pipeline tests (Prompt → LLM → Parser → Validator → PGN)
+- Batch generation testing
+- Advanced context generation
+- Progress tracking integration
+- Multi-format export validation
+
+---
+
+## 13. Conclusion
 
 CAISSA represents a paradigm shift in chess AI:
 
@@ -628,6 +680,6 @@ The system is modular, testable, and extensible. The foundation is solid. The fr
 
 ---
 
-**Next Phase**: Phase 3.2 - Quality Analysis, Auto-Annotation System, Advanced Beauty Metrics
+**Next Phase**: Phase 4.0 - Web Interface, Game Database, Research Paper Integration
 
 **"We don't generate chess games. We generate immortality."** ♟️
