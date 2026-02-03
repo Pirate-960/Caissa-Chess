@@ -64,7 +64,10 @@ poetry run python --version
 # Run basic tests (no API keys needed)
 poetry run pytest tests/test_multi_providers.py -v
 
-# Should show: 49 passed
+# Run all tests
+poetry run pytest tests/ -v
+
+# Should show: 264 passed, 13 skipped
 ```
 
 ---
@@ -77,23 +80,37 @@ Caissa-Chess/
 │   ├── generator.py               # Game orchestrator
 │   ├── board_state.py             # Chess board state
 │   ├── prompt_manager.py          # LLM prompt assembly
-│   └── llm_provider.py            # Multi-provider LLM interface
+│   └── llm_provider.py            # Multi-provider LLM interface + metrics
 │
 ├── engine/                        # Validation & analysis
 │   ├── legality.py                # Move validation
+│   ├── stockfish_client.py        # UCI protocol wrapper
 │   └── __init__.py
 │
 ├── aesthetic/                     # Beauty evaluation
 │   ├── beauty_eval.py             # Brilliance scoring
 │   └── style_slider.py            # Style presets
 │
+├── benchmarks/                    # Performance & quality analysis (v0.3.2)
+│   ├── provider_benchmark.py      # Multi-provider benchmarking
+│   ├── rich_console.py            # Color output & charts
+│   ├── quality_analyzer.py        # Game quality scoring
+│   ├── benchmark_history.py       # Trend analysis & persistence
+│   └── report_generator.py        # HTML/Markdown reports
+│
 ├── export/                        # Output formatting
 │   └── pgn_builder.py             # PGN generation
 │
-├── tests/                         # Test suite (49 tests)
+├── tests/                         # Test suite (264 tests)
 │   ├── test_legality.py           # Move validation tests
 │   ├── test_llm_integration.py    # LLM integration tests
-│   └── test_multi_providers.py    # Provider tests (26 tests)
+│   ├── test_multi_providers.py    # Provider tests
+│   ├── test_stockfish.py          # Stockfish tests
+│   ├── test_e2e_generation.py     # End-to-end tests
+│   ├── test_live_providers.py     # Live API tests
+│   ├── test_phase31_*.py          # Phase 3.1 tests
+│   ├── test_phase32_metrics.py    # Metrics tests
+│   └── test_phase32_plus.py       # Phase 3.2+ tests
 │
 ├── data/                          # Reference data
 │   └── openings.json              # ECO codes
@@ -121,13 +138,20 @@ poetry run pytest tests/ -v
 # Run only provider tests
 poetry run pytest tests/test_multi_providers.py -v
 
+# Run Phase 3.2 metrics tests
+poetry run pytest tests/test_phase32_metrics.py -v
+
 # Run with coverage
 poetry run pytest tests/ --cov --cov-report=term-missing
 
 # Run legality validator tests
 poetry run pytest tests/test_legality.py -v
 
-# Expected output: 26 passed, 2 warnings in ~28 seconds
+# Run benchmarking tests
+poetry run pytest tests/test_phase32_plus.py -v
+
+# Expected output: 264 passed, 13 skipped
+# (13 skipped are live API tests that need --run-live flag)
 ```
 
 ---

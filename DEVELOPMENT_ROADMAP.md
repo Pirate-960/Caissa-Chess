@@ -5,7 +5,7 @@
 **Project Status**: `v0.3.2 - Phase 3.2+ Enhanced Benchmarking Complete`  
 **Previous**: `v0.3.1 - Phase 3.2 Quality & Testing Complete`
 **Last Updated**: February 2026
-**Tests**: 250+ passing ✅
+**Tests**: 264 passing, 13 skipped ✅
 
 ---
 
@@ -201,11 +201,46 @@ python caissa.py generate --style romantic --aggression 8 --output game.pgn
 - [x] **RecommendationEngine** - AI-powered provider recommendations
 - [x] **StatisticalAnalyzer** - Confidence intervals, Cohen's d effect sizes
 
-### v0.5.0 (Planned) - Quality & Analysis
+### v0.4.0 (Planned) - Quality & Analysis
 - [ ] Turing test mode (distinguish from real games)
 - [ ] Auto-annotation system (GM commentary)
 - [ ] Game memory/caching
 - [ ] Advanced beauty metrics
+
+### v0.5.0 (Planned) - Web Interface & API
+
+**Backend (FastAPI + PostgreSQL)**:
+- [ ] RESTful API with OpenAPI/Swagger documentation
+- [ ] WebSocket support for real-time generation progress
+- [ ] PostgreSQL database for game storage & analytics
+- [ ] Redis caching for session management & rate limiting
+- [ ] JWT authentication with OAuth2 (GitHub, Google)
+- [ ] Background task queue (Celery + Redis)
+- [ ] Comprehensive logging & error tracking (Sentry)
+
+**Frontend (Next.js 14 + TypeScript)**:
+- [ ] Server-side rendering for SEO & performance
+- [ ] Interactive chessboard with react-chessboard
+- [ ] Real-time generation progress with WebSocket
+- [ ] Game replay with move-by-move analysis
+- [ ] Responsive design (mobile-first)
+- [ ] Dark/light theme support
+- [ ] PWA capabilities for offline access
+
+**DevOps & Deployment**:
+- [ ] Docker Compose for local development
+- [ ] Multi-stage Dockerfile for optimized images
+- [ ] GitHub Actions CI/CD pipeline
+- [ ] Infrastructure as Code (Terraform)
+- [ ] Kubernetes manifests for cloud deployment
+- [ ] Health checks & readiness probes
+- [ ] Prometheus metrics & Grafana dashboards
+
+**Cloud Deployment Options**:
+- [ ] Railway / Render (simple deployment)
+- [ ] AWS (ECS/EKS) or GCP (Cloud Run/GKE)
+- [ ] Vercel for Next.js frontend
+- [ ] Managed PostgreSQL (Supabase/Neon)
 
 ### v1.0.0 (Planned) - Production Ready
 - [ ] Web interface (Flask/FastAPI)

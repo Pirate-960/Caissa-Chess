@@ -249,7 +249,19 @@ See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
   - 📋 HTML/Markdown report generation
   - 🔍 Quality analysis for generated games
   - ⚠️ Regression detection and alerts
-- 🎯 **v1.0**: Production-ready web interface
+- 📋 **v0.4.0**: Quality & Analysis (Planned)
+  - Auto-annotation system with GM-level commentary
+  - Turing test mode for game evaluation
+  - Game database with search and analytics
+- 📋 **v0.5.0**: Web Interface & API (Planned)
+  - FastAPI backend with PostgreSQL + Redis
+  - Next.js 14 frontend with TypeScript
+  - Real-time WebSocket generation progress
+  - Interactive chessboard with game replay
+  - JWT auth with OAuth2 (GitHub, Google)
+  - Docker + Kubernetes deployment ready
+  - CI/CD with GitHub Actions
+- 🎯 **v1.0**: Production-ready release
 
 ## 🔬 Research Applications
 

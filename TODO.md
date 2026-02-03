@@ -1,8 +1,8 @@
 # 📋 CAISSA Development TODO List
 
-**Last Updated**: February 3, 2026  
-**Current Version**: v0.2.0  
-**Next Target**: v0.2.1 (API Testing & Validation)
+**Last Updated**: February 4, 2026  
+**Current Version**: v0.3.2 (Phase 3.2+ Enhanced Benchmarking Complete)  
+**Tests**: 264 passed, 13 skipped
 
 ---
 
@@ -63,11 +63,51 @@
   - [x] docs/ROADMAP.md - Project vision & timeline
   - [x] cleanup_docs.py - Automated cleanup utility
 
+### v0.3.0 - Stockfish Integration + Phase 3.1 (February 2026) ✅
+- [x] Created `engine/stockfish_client.py` with UCI protocol wrapper
+- [x] Position evaluation (depth-configurable)
+- [x] Best move suggestion
+- [x] Sacrifice detection using evaluations
+- [x] Graceful degradation (Passive Mode when binary unavailable)
+- [x] Thread-safe evaluation caching
+- [x] Batch generation with progress tracking
+- [x] 15 historical players (Morphy, Tal, Capablanca, Fischer, Kasparov, AlphaZero, etc.)
+- [x] 7 narrative arcs (Blitzkrieg, Comeback, Slow Squeeze, Brilliancy, etc.)
+- [x] NAG annotations (50+ standard glyphs)
+- [x] Multi-format export (PGN, Markdown, HTML, JSON)
+- [x] Advanced retry strategies (exponential, linear, adaptive)
+
+### v0.3.1 - Quality & Testing (Phase 3.2) (February 2026) ✅
+- [x] TokenUsage - Track input/output tokens per generation
+- [x] CostEstimate - USD cost estimation per API call
+- [x] GenerationMetrics - Complete metrics for single LLM call
+- [x] ProviderMetrics - Aggregate metrics across multiple calls
+- [x] `generate_with_metrics()` - New method for tracked generation
+- [x] MODEL_PRICING - Pricing database for 15+ models
+- [x] `benchmarks/provider_benchmark.py` - Multi-provider benchmarking
+- [x] LatencyMetrics - Min/max/mean/median/p95/p99
+- [x] QualityMetrics - Response quality assessment
+- [x] BenchmarkSuite - Multi-provider comparison
+- [x] `tests/test_live_providers.py` - Live API testing (--run-live flag)
+- [x] `tests/test_e2e_generation.py` - End-to-end pipeline tests
+- [x] `tests/test_phase32_metrics.py` - Metrics unit tests (70 tests)
+
+### v0.3.2 - Enhanced Benchmarking (Phase 3.2+) (February 2026) ✅
+- [x] `benchmarks/rich_console.py` - Color-coded terminal output
+- [x] ProgressBar - ASCII progress bars with live updates
+- [x] Table - Rich ASCII tables with Unicode box-drawing
+- [x] sparkline() - Inline sparkline charts
+- [x] histogram() - ASCII histogram visualization
+- [x] `benchmarks/quality_analyzer.py` - Chess-specific quality analysis
+- [x] `benchmarks/benchmark_history.py` - Historical trend analysis
+- [x] `benchmarks/report_generator.py` - HTML/Markdown reports
+- [x] `tests/test_phase32_plus.py` - 94 comprehensive tests
+
 ---
 
-## 🟡 In Progress (v0.2.1 - API Testing & Validation)
+## 🟡 Future Enhancements (Post v0.3.x)
 
-### Priority 1: Live API Testing 🔥 (This Week)
+### Priority 1: Live API Testing 🔥
 
 #### OpenAI Provider Testing
 - [ ] **Environment Setup**
@@ -610,7 +650,7 @@
 
 ---
 
-## 🟣 TODO (v0.5.0 - Quality & Analysis)
+## 🟣 TODO (v0.4.0 - Quality & Analysis)
 
 ### Phase 1: Auto-Annotation (Week 7)
 
@@ -754,80 +794,302 @@
 
 ---
 
-## 🟠 TODO (v1.0.0 - Production)
+## � TODO (v0.5.0 - Web Interface & API)
 
-### Phase 1: Web Interface (Week 10)
+### Phase 1: Backend Foundation (Week 1-2)
 
-#### Backend (FastAPI)
-- [ ] **Core API**
-  - [ ] REST API for game generation
-  - [ ] Endpoint: POST /api/v1/generate
-  - [ ] Endpoint: GET /api/v1/styles
-  - [ ] Endpoint: GET /api/v1/themes
-  - [ ] Endpoint: GET /api/v1/games/{id}
-  - [ ] Endpoint: GET /api/v1/games (list with filters)
+#### Project Setup
+- [ ] **FastAPI Project Structure**
+  ```
+  api/
+  ├── app/
+  │   ├── __init__.py
+  │   ├── main.py              # FastAPI app entry
+  │   ├── config.py            # Settings with Pydantic
+  │   ├── database.py          # SQLAlchemy setup
+  │   ├── dependencies.py      # Dependency injection
+  │   ├── models/              # SQLAlchemy models
+  │   ├── schemas/             # Pydantic schemas
+  │   ├── routers/             # API routes
+  │   ├── services/            # Business logic
+  │   └── utils/               # Helpers
+  ├── alembic/                 # Database migrations
+  ├── tests/                   # API tests
+  ├── Dockerfile
+  └── pyproject.toml
+  ```
 
-- [ ] **Game Generation Endpoint**
-  - [ ] Accept: style, theme, aggression, chaos parameters
-  - [ ] Async generation with job queue
-  - [ ] Webhook notifications on completion
-  - [ ] Progress polling endpoint
-  - [ ] Cancellation support
+- [ ] **Dependencies**
+  - [ ] FastAPI + Uvicorn (ASGI server)
+  - [ ] SQLAlchemy 2.0 + Alembic (database)
+  - [ ] Pydantic v2 (validation)
+  - [ ] python-jose (JWT)
+  - [ ] redis-py (caching)
+  - [ ] celery (background tasks)
+  - [ ] httpx (async HTTP client)
 
-- [ ] **Authentication & Security**
-  - [ ] JWT token authentication
-  - [ ] API key management
-  - [ ] Rate limiting per user/tier
+#### Core API Endpoints
+- [ ] **Game Generation**
+  - [ ] `POST /api/v1/games/generate` - Start generation
+  - [ ] `GET /api/v1/games/{id}` - Get game details
+  - [ ] `GET /api/v1/games` - List games (paginated)
+  - [ ] `DELETE /api/v1/games/{id}` - Delete game
+
+- [ ] **Configuration**
+  - [ ] `GET /api/v1/providers` - List LLM providers
+  - [ ] `GET /api/v1/styles` - List generation styles
+  - [ ] `GET /api/v1/eras` - List historical eras
+  - [ ] `GET /api/v1/themes` - List game themes
+
+- [ ] **System**
+  - [ ] `GET /api/v1/health` - Health check
+  - [ ] `GET /api/v1/metrics` - Prometheus metrics
+  - [ ] `GET /docs` - Swagger UI
+  - [ ] `GET /redoc` - ReDoc documentation
+
+#### Database Schema
+- [ ] **PostgreSQL Tables**
+  ```sql
+  -- Users
+  CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    email VARCHAR(255) UNIQUE,
+    username VARCHAR(50) UNIQUE,
+    hashed_password VARCHAR(255),
+    oauth_provider VARCHAR(50),
+    oauth_id VARCHAR(255),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP
+  );
+
+  -- Games
+  CREATE TABLE games (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    pgn TEXT NOT NULL,
+    style VARCHAR(50),
+    era VARCHAR(50),
+    theme VARCHAR(100),
+    provider VARCHAR(50),
+    model VARCHAR(100),
+    beauty_score FLOAT,
+    move_count INT,
+    metadata JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+  );
+
+  -- Generation Jobs
+  CREATE TABLE generation_jobs (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    status VARCHAR(20), -- pending, running, completed, failed
+    progress INT DEFAULT 0,
+    config JSONB,
+    result_game_id UUID REFERENCES games(id),
+    error_message TEXT,
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+  );
+  ```
+
+### Phase 2: Authentication & Security (Week 2)
+
+#### Authentication
+- [ ] **JWT Authentication**
+  - [ ] Access token (15 min expiry)
+  - [ ] Refresh token (7 day expiry)
+  - [ ] Token rotation on refresh
+  - [ ] Secure httpOnly cookies
+
+- [ ] **OAuth2 Providers**
+  - [ ] GitHub OAuth2 flow
+  - [ ] Google OAuth2 flow
+  - [ ] Account linking
+  - [ ] Profile sync
+
+- [ ] **API Keys**
+  - [ ] Generate API keys for users
+  - [ ] Scoped permissions
+  - [ ] Usage tracking
+  - [ ] Key rotation
+
+#### Security
+- [ ] **Rate Limiting**
+  - [ ] Per-user rate limits
+  - [ ] Per-endpoint limits
+  - [ ] Sliding window algorithm
+  - [ ] Redis-backed storage
+
+- [ ] **Security Headers**
   - [ ] CORS configuration
-  - [ ] Input validation and sanitization
+  - [ ] CSP headers
+  - [ ] HSTS
+  - [ ] X-Frame-Options
 
-- [ ] **Background Jobs**
-  - [ ] Celery/RQ integration
-  - [ ] Job status tracking
-  - [ ] Job prioritization
-  - [ ] Retry logic for failures
-  - [ ] Dead letter queue
+### Phase 3: Frontend Development (Week 3-4)
 
-#### Frontend (React/Vue)
-- [ ] **Game Generation UI**
-  - [ ] Interactive style selection
-  - [ ] Theme picker with descriptions
-  - [ ] Slider controls for aggression/chaos
-  - [ ] Era selection
-  - [ ] Preview generation parameters
+#### Next.js 14 Setup
+- [ ] **Project Structure**
+  ```
+  web/
+  ├── app/                     # App router
+  │   ├── (auth)/              # Auth pages
+  │   ├── (dashboard)/         # Protected pages
+  │   ├── api/                 # API routes
+  │   ├── layout.tsx
+  │   └── page.tsx
+  ├── components/
+  │   ├── ui/                  # shadcn/ui components
+  │   ├── chess/               # Chess-specific
+  │   └── shared/              # Shared components
+  ├── lib/
+  │   ├── api.ts               # API client
+  │   ├── auth.ts              # Auth helpers
+  │   └── utils.ts
+  ├── hooks/                   # Custom hooks
+  ├── stores/                  # Zustand stores
+  ├── types/                   # TypeScript types
+  ├── Dockerfile
+  └── package.json
+  ```
 
-- [ ] **Real-Time Features**
-  - [ ] Real-time progress display
-  - [ ] WebSocket updates during generation
-  - [ ] Live move-by-move display
-  - [ ] Estimated completion time
-  - [ ] Cancel in progress
+- [ ] **Tech Stack**
+  - [ ] Next.js 14 (App Router)
+  - [ ] TypeScript (strict mode)
+  - [ ] Tailwind CSS
+  - [ ] shadcn/ui components
+  - [ ] React Query (TanStack Query)
+  - [ ] Zustand (state management)
+  - [ ] react-chessboard
 
-- [ ] **Game Viewer**
-  - [ ] Interactive chess board
-  - [ ] PGN viewer with move list
-  - [ ] Annotation display panel
-  - [ ] Evaluation graph
-  - [ ] Move navigation (forward/backward)
+#### Core Pages
+- [ ] **Public Pages**
+  - [ ] `/` - Landing page with demo
+  - [ ] `/docs` - API documentation
+  - [ ] `/pricing` - Pricing tiers (if applicable)
+  - [ ] `/auth/login` - Login page
+  - [ ] `/auth/register` - Registration
 
-- [ ] **User Features**
-  - [ ] Game history
-  - [ ] Favorite games collection
-  - [ ] Share games (public links)
-  - [ ] Export options
-  - [ ] User preferences
+- [ ] **Protected Pages**
+  - [ ] `/dashboard` - User dashboard
+  - [ ] `/generate` - Game generation wizard
+  - [ ] `/games` - Game library
+  - [ ] `/games/[id]` - Game detail + replay
+  - [ ] `/games/[id]/analysis` - Move analysis
+  - [ ] `/settings` - User settings
+  - [ ] `/api-keys` - API key management
 
-#### Database (PostgreSQL)
-- [ ] **Schema Design**
-  - [ ] Users table
-  - [ ] Games table with metadata
-  - [ ] Generations table (job tracking)
-  - [ ] Analytics table
-  - [ ] Audit log
+#### Chessboard Component
+- [ ] **Features**
+  - [ ] Interactive piece movement
+  - [ ] Move animation
+  - [ ] Last move highlighting
+  - [ ] Legal move indicators
+  - [ ] Check/checkmate highlighting
+  - [ ] Arrow annotations
+  - [ ] Board flip
+  - [ ] Custom themes (wood, blue, green)
 
-- [ ] **Data Management**
-  - [ ] Store user preferences
-  - [ ] Track usage statistics
+- [ ] **Replay Controls**
+  - [ ] Play/pause animation
+  - [ ] Speed control (0.5x - 4x)
+  - [ ] Step forward/backward
+  - [ ] Jump to move
+  - [ ] Move list sidebar
+  - [ ] Evaluation bar
+
+### Phase 4: Real-Time Features (Week 4)
+
+#### WebSocket Integration
+- [ ] **Backend (FastAPI)**
+  - [ ] WebSocket endpoint `/ws/generation/{job_id}`
+  - [ ] Progress updates during generation
+  - [ ] Move-by-move streaming
+  - [ ] Error notifications
+  - [ ] Connection heartbeat
+
+- [ ] **Frontend**
+  - [ ] WebSocket client hook
+  - [ ] Reconnection logic
+  - [ ] Progress bar component
+  - [ ] Live move display
+  - [ ] Toast notifications
+
+### Phase 5: DevOps & Deployment (Week 5-6)
+
+#### Docker Configuration
+- [ ] **docker-compose.yml**
+  ```yaml
+  services:
+    api:
+      build: ./api
+      ports: ["8000:8000"]
+      depends_on: [db, redis]
+      environment:
+        - DATABASE_URL=postgresql://...
+        - REDIS_URL=redis://redis:6379
+    
+    web:
+      build: ./web
+      ports: ["3000:3000"]
+      depends_on: [api]
+    
+    db:
+      image: postgres:16
+      volumes: [postgres_data:/var/lib/postgresql/data]
+    
+    redis:
+      image: redis:7-alpine
+    
+    worker:
+      build: ./api
+      command: celery -A app.worker worker
+      depends_on: [db, redis]
+  ```
+
+- [ ] **Dockerfiles**
+  - [ ] Multi-stage build for API
+  - [ ] Multi-stage build for frontend
+  - [ ] Non-root user for security
+  - [ ] Health check commands
+
+#### CI/CD Pipeline
+- [ ] **GitHub Actions**
+  ```yaml
+  # .github/workflows/deploy.yml
+  jobs:
+    test:
+      - Lint (ruff, eslint)
+      - Type check (mypy, tsc)
+      - Unit tests
+      - Integration tests
+    
+    build:
+      - Build Docker images
+      - Push to registry
+    
+    deploy-staging:
+      - Deploy to staging
+      - Run E2E tests
+    
+    deploy-production:
+      - Manual approval
+      - Deploy to production
+      - Health check
+  ```
+
+#### Monitoring
+- [ ] **Observability Stack**
+  - [ ] Prometheus metrics endpoint
+  - [ ] Grafana dashboards
+  - [ ] Sentry error tracking
+  - [ ] Structured JSON logging
+  - [ ] Request tracing (OpenTelemetry)
+
+---
+
+## 🟠 TODO (v1.0.0 - Production)
   - [ ] Implement soft delete
   - [ ] Data retention policies
   - [ ] GDPR compliance features
@@ -1068,32 +1330,45 @@
 |---------|------|--------|------------|------|
 | v0.1.0 | Core Architecture | ✅ Complete | 100% | Jan 31, 2026 |
 | v0.2.0 | Multi-Provider LLM | ✅ Complete | 100% | Feb 2, 2026 |
-| v0.2.1 | API Testing & Validation | 🟡 In Progress | 0% | Feb 2026 |
-| v0.3.0 | Stockfish Integration | 🔵 Planned | 0% | Feb-Mar 2026 |
-| v0.5.0 | Quality & Analysis | 🟣 Planned | 0% | Mar-Apr 2026 |
-| v1.0.0 | Production Ready | 🟠 Planned | 0% | Apr-May 2026 |
+| v0.3.0 | Stockfish + Phase 3.1 | ✅ Complete | 100% | Feb 3, 2026 |
+| v0.3.1 | Quality & Testing (Phase 3.2) | ✅ Complete | 100% | Feb 3, 2026 |
+| v0.3.2 | Enhanced Benchmarking (Phase 3.2+) | ✅ Complete | 100% | Feb 4, 2026 |
+| v0.4.0 | Quality & Analysis | 🔵 Planned | 0% | Mar 2026 |
+| v0.5.0 | Web Interface & API | 🔵 Planned | 0% | Apr-May 2026 |
+| v1.0.0 | Production Ready | 🟠 Planned | 0% | Jun 2026 |
 
-### Current Sprint: v0.2.1 - API Testing
-| Task | Priority | Status | Assignee | Notes |
-|------|----------|--------|----------|-------|
-| OpenAI API testing | P1 | 🔲 Not Started | - | Requires API key |
-| Anthropic API testing | P1 | 🔲 Not Started | - | Requires API key |
-| Azure API testing | P2 | 🔲 Not Started | - | Enterprise setup |
-| Gemini API testing | P2 | 🔲 Not Started | - | Requires Google account |
-| Ollama local testing | P2 | 🔲 Not Started | - | Local setup required |
-| PGN extraction testing | P1 | 🔲 Not Started | - | Core functionality |
-| End-to-end generation | P1 | 🔲 Not Started | - | Integration test |
-| Error handling | P1 | 🔲 Not Started | - | Resilience |
-| Logging infrastructure | P2 | 🔲 Not Started | - | Observability |
-| Provider comparison | P3 | 🔲 Not Started | - | Benchmarking |
+### Current Sprint: v0.3.2 Complete ✅
+| Task | Priority | Status | Notes |
+|------|----------|--------|-------|
+| Rich console output | P1 | ✅ Complete | Color & charts |
+| Quality analyzer | P1 | ✅ Complete | Chess-specific |
+| Benchmark history | P2 | ✅ Complete | Trend analysis |
+| Report generator | P1 | ✅ Complete | HTML/Markdown |
+| 264 tests passing | P1 | ✅ Complete | 13 skipped (live) |
+
+### v0.5.0 Web Interface Tech Stack
+| Component | Technology | Status |
+|-----------|------------|--------|
+| Backend | FastAPI + Uvicorn | 📋 Planned |
+| Database | PostgreSQL + SQLAlchemy | 📋 Planned |
+| Cache | Redis | 📋 Planned |
+| Frontend | Next.js 14 + TypeScript | 📋 Planned |
+| UI Library | shadcn/ui + Tailwind | 📋 Planned |
+| Chess UI | react-chessboard | 📋 Planned |
+| Auth | JWT + OAuth2 | 📋 Planned |
+| Deploy | Docker + Kubernetes | 📋 Planned |
+| CI/CD | GitHub Actions | 📋 Planned |
+| Monitoring | Prometheus + Grafana | 📋 Planned |
 
 ### Milestone Tracking
 ```
 ✅ v0.1.0: Core Architecture        [██████████] 100%
 ✅ v0.2.0: Multi-Provider LLM       [██████████] 100%
-🟡 v0.2.1: API Testing              [░░░░░░░░░░]   0%
-🔵 v0.3.0: Stockfish Integration    [░░░░░░░░░░]   0%
-🟣 v0.5.0: Quality & Analysis       [░░░░░░░░░░]   0%
+✅ v0.3.0: Stockfish + Phase 3.1    [██████████] 100%
+✅ v0.3.1: Quality & Testing        [██████████] 100%
+✅ v0.3.2: Enhanced Benchmarking    [██████████] 100%
+🔵 v0.4.0: Quality & Analysis       [░░░░░░░░░░]   0%
+🔵 v0.5.0: Web Interface & API      [░░░░░░░░░░]   0%
 🟠 v1.0.0: Production Ready         [░░░░░░░░░░]   0%
 ```
 
@@ -1101,13 +1376,12 @@
 ```
 Jan 31, 2026: v0.1.0 - Core Architecture      ✅ COMPLETE
 Feb  2, 2026: v0.2.0 - Multi-Provider LLM     ✅ COMPLETE
-Feb  9, 2026: v0.2.1 - API Testing & Validation
-Feb 21, 2026: v0.3.0 - Stockfish Integration
-Mar  7, 2026: v0.4.0 - Enhanced Beauty Scoring
-Mar 21, 2026: v0.5.0 - Quality & Analysis
-Apr  4, 2026: v0.6.0 - Turing Test Mode
-Apr 18, 2026: v0.7.0 - Web Backend (FastAPI)
-May  2, 2026: v0.8.0 - Web Frontend (React)
+Feb  3, 2026: v0.3.0 - Stockfish + Phase 3.1  ✅ COMPLETE
+Feb  3, 2026: v0.3.1 - Quality & Testing      ✅ COMPLETE
+Feb  4, 2026: v0.3.2 - Enhanced Benchmarking  ✅ COMPLETE
+Mar  7, 2026: v0.4.0 - Quality & Analysis
+May  2, 2026: v0.5.0 - Web Interface & API (6 weeks)
+Jun 15, 2026: v1.0.0 - Production Ready
 May 16, 2026: v0.9.0 - Docker & Deployment
 May 30, 2026: v1.0.0 - Production Ready
 Jun 15, 2026: v1.1.0 - Research Paper Submission
@@ -1295,20 +1569,21 @@ gh pr create --base develop
 1. Read [docs/SETUP.md](docs/SETUP.md) for installation
 2. Read [docs/PROVIDERS.md](docs/PROVIDERS.md) for LLM configuration
 3. Run `poetry install` to set up environment
-4. Run `poetry run pytest tests/ -v` to verify setup
+4. Run `poetry run pytest tests/ -v` to verify setup (264 passed, 13 skipped)
 
 ### Contributing
-1. Check the "In Progress" section for current sprint tasks
+1. Check the "Future Enhancements" section for upcoming tasks
 2. Pick a task matching your skills
 3. Create a feature branch (`feat/task-name`)
 4. Update this TODO when starting/completing tasks
 5. Submit PR with detailed description
 
-### Current Focus (v0.2.1)
-**Priority**: Live API testing for all 6 providers
-- Start with provider you have API keys for
-- Document any issues or limitations
-- Update test coverage as needed
+### Current Status (v0.3.2)
+**Status**: Phase 3.2+ Enhanced Benchmarking Complete ✅
+- 264 tests passing, 13 skipped (live API tests)
+- Full benchmarking suite with rich console output
+- HTML/Markdown report generation
+- Historical trend analysis
 
 ---
 
@@ -1334,8 +1609,8 @@ gh pr create --base develop
 
 ---
 
-**Last Updated**: February 2, 2026  
-**Status**: v0.2.0 Complete | v0.2.1 In Progress  
+**Last Updated**: February 4, 2026  
+**Status**: v0.3.2 Complete | 264 Tests Passing  
 **Owner**: CAISSA Development Team  
 
 Good luck! 🚀♟️
