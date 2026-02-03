@@ -1,8 +1,10 @@
 # 🏗️ CAISSA System Architecture Document
 
-**Version**: 1.0  
-**Date**: January 31, 2026  
-**Status**: Core Design Complete, Integration Pending
+> **📖 Quick Reference** | For the comprehensive architecture guide, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
+
+**Version**: 2.0  
+**Date**: February 3, 2026  
+**Status**: v0.2.0 - Multi-Provider LLM Integration Complete
 
 ---
 

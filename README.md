@@ -10,12 +10,22 @@ Unlike traditional engines that optimize for a single metric (strength), CAISSA 
 
 ## 📚 Documentation
 
-Quick links to comprehensive documentation:
-- **[SETUP.md](docs/SETUP.md)** - Installation guide & API configuration for all 6 providers
-- **[PROVIDERS.md](docs/PROVIDERS.md)** - Complete multi-provider guide (OpenAI, Anthropic, Azure, Google Gemini, Ollama, Mock)
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System design & technical deep dive
-- **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Contributing guidelines & code standards
-- **[ROADMAP.md](docs/ROADMAP.md)** - Project vision, timeline & future features
+### 🚀 Quick References (Root)
+| File | Purpose |
+|------|---------|
+| [QUICKSTART.md](QUICKSTART.md) | Get running in 10 minutes |
+| [PROVIDER_QUICK_REFERENCE.md](PROVIDER_QUICK_REFERENCE.md) | One-liner examples for all 6 providers |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System overview |
+| [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) | Current status & what's next |
+
+### 📚 Comprehensive Guides (docs/)
+| File | Purpose |
+|------|---------|
+| [docs/SETUP.md](docs/SETUP.md) | Complete installation & configuration |
+| [docs/PROVIDERS.md](docs/PROVIDERS.md) | Full provider guide with troubleshooting |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deep technical design |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Contributing & code standards |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Full project vision & timeline |
 
 ## 🏗️ Architecture Overview
 
@@ -126,9 +136,9 @@ See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
 
 **Current Status**: 
 - ✅ **v0.1**: Core generation pipeline (legality validation)
-- ✅ **v0.2**: Multi-provider LLM support (6 providers with 26/26 tests passing)
-- 🚀 **v0.3**: Stockfish integration (in progress)
-- 📋 **v0.5**: Advanced quality & analysis features
+- ✅ **v0.2**: Multi-provider LLM support (6 providers, 49 tests passing)
+- 🚀 **v0.2.1**: API testing & validation (next)
+- 📋 **v0.3**: Stockfish integration (planned)
 - 🎯 **v1.0**: Production-ready web interface
 
 ## 🔬 Research Applications
@@ -147,4 +157,5 @@ MIT
 ---
 
 **Status**: `🔧 In Active Development`  
-**Last Updated**: January 31, 2026
+**Version**: v0.2.0 (Multi-Provider LLM Integration)  
+**Last Updated**: February 3, 2026

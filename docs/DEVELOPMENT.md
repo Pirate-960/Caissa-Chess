@@ -1,5 +1,7 @@
 # Development Guide
 
+> **📚 Comprehensive Guide** | See also: [../CONTRIBUTING.md](../CONTRIBUTING.md) for PR process
+
 ## Getting Started with CAISSA Development
 
 Welcome! This guide will help you contribute to CAISSA effectively.

@@ -1,5 +1,7 @@
 # Multi-Provider Support Guide
 
+> **📚 Comprehensive Guide** | Quick reference: [../PROVIDER_QUICK_REFERENCE.md](../PROVIDER_QUICK_REFERENCE.md)
+
 CAISSA supports **6 different LLM providers**, giving you flexibility to choose based on cost, performance, privacy, and availability.
 
 ## Supported Providers Overview
@@ -924,7 +926,7 @@ pytest tests/test_multi_providers.py::TestAzureOpenAIProvider -v
 
 ### Test Results
 
-Current status: **26/26 tests passing** ✅
+Current status: **26/26 provider tests passing** (49 total in suite) ✅
 
 ```
 tests/test_multi_providers.py::TestAnthropicProvider::test_init_with_api_key PASSED

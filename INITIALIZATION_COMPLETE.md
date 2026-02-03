@@ -3,7 +3,7 @@
 ```
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
-║   CAISSA: The Aesthetic Chess Engine — v0.1.0                                ║
+║   CAISSA: The Aesthetic Chess Engine — v0.2.0                                ║
 ║                                                                              ║
 ║   "We don't generate chess games. We generate immortality."                  ║
 ║                                                                              ║
@@ -312,9 +312,9 @@ Configuration
 ## 📈 From Here to Greatness
 
 ```
-v0.1.0 (TODAY)          v0.2.0 (2 weeks)       v0.3.0 (4 weeks)
-Core Architecture       LLM Integration        Stockfish
-✅ Done                 ⏳ Next                 ⏳ Future
+v0.1.0 (Jan 31)        v0.2.0 (Feb 3)         v0.3.0 (4 weeks)
+Core Architecture       Multi-Provider LLM     Stockfish
+✅ Done                 ✅ Done                 ⏳ Future
                         
 v0.5.0 (8 weeks)        v1.0.0 (12 weeks)
 Quality & Analysis      Production Ready

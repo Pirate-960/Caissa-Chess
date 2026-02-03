@@ -1,5 +1,7 @@
 # CAISSA Setup & Configuration Guide
 
+> **📚 Comprehensive Guide** | Quick start: [../QUICKSTART.md](../QUICKSTART.md)
+
 Complete guide for installing CAISSA and configuring all 6 LLM providers.
 
 ## Table of Contents
@@ -62,7 +64,7 @@ poetry run python --version
 # Run basic tests (no API keys needed)
 poetry run pytest tests/test_multi_providers.py -v
 
-# Should show: 26 passed, 2 warnings
+# Should show: 49 passed
 ```
 
 ---
@@ -88,8 +90,9 @@ Caissa-Chess/
 ├── export/                        # Output formatting
 │   └── pgn_builder.py             # PGN generation
 │
-├── tests/                         # Test suite
-│   ├── test_legality.py
+├── tests/                         # Test suite (49 tests)
+│   ├── test_legality.py           # Move validation tests
+│   ├── test_llm_integration.py    # LLM integration tests
 │   └── test_multi_providers.py    # Provider tests (26 tests)
 │
 ├── data/                          # Reference data

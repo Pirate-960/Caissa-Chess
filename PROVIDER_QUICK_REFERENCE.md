@@ -1,5 +1,7 @@
 # CAISSA Provider Quick Reference
 
+> **📖 Quick Reference** | For the comprehensive provider guide with troubleshooting, see **[docs/PROVIDERS.md](docs/PROVIDERS.md)**
+
 ## 🚀 One-Liners for Each Provider
 
 ### OpenAI (GPT-4)

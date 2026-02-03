@@ -1,5 +1,7 @@
 # 🚀 CAISSA Quick Start Guide
 
+> **📖 Quick Reference** | For the comprehensive setup guide with all provider configurations, see **[docs/SETUP.md](docs/SETUP.md)**
+
 Welcome to **CAISSA: The Aesthetic Chess Engine**!
 
 This guide will get you up and running in 10 minutes.
@@ -125,9 +127,35 @@ The Capablanca (capablanca)
 
 ## 6️⃣ Generate a Game (With LLM)
 
-To actually generate a game, you need to set up an LLM API key.
+To generate games, you need an LLM provider. CAISSA supports **6 providers** (v0.2.0+):
 
-### Option A: OpenAI (Recommended)
+| Provider | Setup | Cost |
+|----------|-------|------|
+| **Ollama** (Recommended for dev) | Local install | **FREE** |
+| **OpenAI** (GPT-4) | API key | Paid |
+| **Anthropic** (Claude) | API key | Paid |
+| **Google Gemini** | API key | Paid |
+| **Azure OpenAI** | Endpoint + key | Paid |
+| **Mock** | None | FREE (testing) |
+
+### Option A: Ollama (FREE - Recommended for Development)
+
+```bash
+# 1. Install Ollama from https://ollama.ai/
+# 2. Start the server and pull a model
+ollama serve
+ollama pull mixtral
+
+# 3. Generate a game (no API key needed!)
+poetry run python caissa.py generate \
+  --provider ollama \
+  --model mixtral \
+  --style romantic \
+  --theme "Queen Sacrifice" \
+  --output game.pgn
+```
+
+### Option B: OpenAI (Best Quality)
 
 ```bash
 # 1. Get an API key from https://platform.openai.com/api-keys
@@ -138,6 +166,8 @@ EOF
 
 # 3. Generate a game
 poetry run python caissa.py generate \
+  --provider openai \
+  --model gpt-4 \
   --style romantic \
   --theme "Queen Sacrifice" \
   --aggression 8 \
@@ -146,6 +176,10 @@ poetry run python caissa.py generate \
 # 4. View the generated PGN
 cat game.pgn
 ```
+
+### Option C: Other Providers
+
+See [PROVIDER_QUICK_REFERENCE.md](PROVIDER_QUICK_REFERENCE.md) for complete setup guides for all 6 providers.
 
 ### Option B: Manual Generation (For Testing)
 
@@ -361,6 +395,6 @@ Welcome to the future of chess. 🚀
 
 ---
 
-**Status**: v0.1.0 - Core architecture complete, ready for LLM integration  
-**Last Updated**: January 31, 2026  
+**Status**: v0.2.0 - Multi-provider LLM integration complete  
+**Last Updated**: February 3, 2026  
 **License**: MIT

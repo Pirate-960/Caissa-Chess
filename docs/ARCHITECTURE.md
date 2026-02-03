@@ -1,5 +1,7 @@
 # System Architecture
 
+> **📚 Comprehensive Guide** | Quick reference: [../ARCHITECTURE.md](../ARCHITECTURE.md)
+
 ## Executive Summary
 
 CAISSA (Chess AI Artistic Interactive System Architecture) is a **Generative Artistic Chess Pipeline** that orchestrates multiple computational agents to generate beautiful, strategically sound chess games.
@@ -594,11 +596,12 @@ caissa-chess/
 │   └── data/
 │       └── openings.json          - Opening reference
 
-├── 🧪 Testing
+├── 🧪 Testing (49 tests)
 │   └── tests/
 │       ├── __init__.py
-│       ├── test_legality.py       (100 lines) - Move validation tests
-│       └── test_multi_providers.py (365 lines) - Provider tests (26/26 passing)
+│       ├── test_legality.py       (100 lines) - Move validation tests (5)
+│       ├── test_llm_integration.py (350 lines) - Integration tests (18)
+│       └── test_multi_providers.py (365 lines) - Provider tests (26)
 
 ├── 🎮 Entry Point
 │   └── caissa.py                  (300 lines) - CLI interface
@@ -744,18 +747,15 @@ All operations logged with:
 
 ## Testing Strategy
 
-### Unit Tests (26 passing)
+### Unit Tests (49 passing)
 ```bash
-pytest tests/test_multi_providers.py -v
+poetry run pytest tests/ -v
 ```
 
-Tests cover:
-- Provider initialization with/without API keys
-- Environment variable configuration
-- API key validation
-- Move generation and mocking
-- Error handling for missing packages
-- Interface compliance
+Test files:
+- `test_multi_providers.py` - 26 provider tests
+- `test_llm_integration.py` - 18 integration tests
+- `test_legality.py` - 5 validation tests
 
 ### Integration Tests
 ```bash

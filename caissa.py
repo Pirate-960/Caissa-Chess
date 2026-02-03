@@ -187,7 +187,8 @@ def cmd_info(args):
     5. The Storyteller (LLM): Writes GM commentary
     
     Architecture: Modular, testable, and extensible.
-    Status: v0.1.0 - Core pipeline complete, LLM integration ready.
+    Previous: v0.1.0 - Core pipeline complete, LLM integration ready.
+    Status: v0.2.0 - Multi-provider LLM integration complete, 6 providers supported.
     
     Quick Start:
     -----------

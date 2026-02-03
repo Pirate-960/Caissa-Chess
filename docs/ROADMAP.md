@@ -1,9 +1,11 @@
 # Project Roadmap
 
+> **📚 Comprehensive Guide** | Quick reference: [../DEVELOPMENT_ROADMAP.md](../DEVELOPMENT_ROADMAP.md)
+
 ## Project Status
 
 **Current Version**: v0.2.0 (Multi-Provider LLM Integration Complete)  
-**Last Updated**: January 31, 2026
+**Last Updated**: February 3, 2026
 
 ---
 
@@ -83,7 +85,7 @@
 - ✓ Automatic retry with exponential backoff
 - ✓ Environment variable configuration
 - ✓ Error handling with fallback strategies
-- ✓ 26 comprehensive tests (all passing)
+- ✓ 49 comprehensive tests (all passing)
 - ✓ Complete provider documentation and setup guides
 - ✓ Cost and performance comparison tools
 
@@ -97,12 +99,12 @@
 - ✅ Automatic retry with exponential backoff
 - ✅ Error handling and graceful degradation
 - ✅ Environment variable and .env file support
-- ✅ 26 comprehensive tests covering all providers
-- ✅ All tests passing (26/26)
+- ✅ 26 comprehensive provider tests (all passing)
+- ✅ 49 total tests across test suite
 
 ### Testing & Quality Assurance
-- ✅ Created comprehensive test suite (tests/test_multi_providers.py)
-- ✅ All 26 tests passing
+- ✅ Created comprehensive test suite (3 test files)
+- ✅ All 49 tests passing
 - ✅ Mock-based testing (no real API calls)
 - ✅ 100% success rate with graceful error handling
 - ✅ Type hints throughout codebase
@@ -315,9 +317,10 @@ caissa-chess/
 │   ├── markdown_report.py         # (PENDING) Game commentary
 │   └── gif_generator.py           # (PENDING) Board visualization
 
-├── tests/                          # Test suite
-│   ├── test_legality.py           # Validation tests
-│   └── test_multi_providers.py    # LLM provider tests (26/26 passing)
+├── tests/                          # Test suite (49 tests)
+│   ├── test_legality.py           # Validation tests (5)
+│   ├── test_llm_integration.py    # Integration tests (18)
+│   └── test_multi_providers.py    # Provider tests (26)
 
 ├── docs/                           # Consolidated documentation
 │   ├── SETUP.md                   # Installation guide
