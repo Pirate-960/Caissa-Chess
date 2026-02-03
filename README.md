@@ -46,6 +46,7 @@ Caissa-Chess/
 ├── core/                    # Main generation pipeline
 │   ├── generator.py         # Primary orchestrator
 │   ├── board_state.py       # Chess board wrapper
+│   ├── llm_provider.py      # Multi-provider LLM abstraction + metrics
 │   └── prompt_manager.py    # Dynamic prompt assembly
 │
 ├── engine/                  # Validation & analysis
@@ -58,6 +59,13 @@ Caissa-Chess/
 │   ├── style_slider.py      # Style presets (Tal, Capablanca, etc)
 │   └── sacrifice_detector.py
 │
+├── benchmarks/              # Performance & quality analysis
+│   ├── provider_benchmark.py    # Multi-provider benchmarking
+│   ├── rich_console.py          # Color output & charts
+│   ├── quality_analyzer.py      # Game quality scoring
+│   ├── benchmark_history.py     # Trend analysis & persistence
+│   └── report_generator.py      # HTML/Markdown reports
+│
 ├── export/                  # Output formatting
 │   ├── pgn_builder.py       # PGN formatting
 │   ├── gif_generator.py     # Board visualization
@@ -67,7 +75,7 @@ Caissa-Chess/
 │   ├── openings.json        # ECO codes
 │   └── master_styles/       # Few-shot examples
 │
-├── tests/                   # Test suite
+├── tests/                   # Test suite (264 tests)
 └── README.md
 ```
 
@@ -183,6 +191,41 @@ Generate games with story structure:
 - **The Slow Squeeze** - Gradual positional domination
 - **The Brilliancy** - Single stunning move turns game
 
+## 📊 Phase 3.2+ Benchmarking Features
+
+### Provider Benchmarking
+```bash
+# Rich console output with colors and charts
+python -m benchmarks.provider_benchmark --all --rich
+
+# Generate HTML report
+python -m benchmarks.provider_benchmark --all --report benchmark.html
+
+# Save to history database for trend analysis
+python -m benchmarks.provider_benchmark --all --save-history
+```
+
+### Quality Analysis
+```python
+from benchmarks.quality_analyzer import QualityAnalyzer
+
+analyzer = QualityAnalyzer()
+report = analyzer.analyze(pgn_string)
+
+print(f"Grade: {report.grade}")  # A+, A, B+, etc.
+print(f"Score: {report.overall_score}/100")
+print(f"Opening: {report.detected_opening}")
+```
+
+### Benchmark History & Trends
+```bash
+# Analyze performance trends over time
+python -m benchmarks.benchmark_history --provider openai --trends
+
+# Detect performance regressions
+python -m benchmarks.benchmark_history --regressions
+```
+
 ## 📋 Development Roadmap
 
 See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
@@ -196,7 +239,16 @@ See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
   - 📝 NAG annotations & multi-format export (PGN/HTML/MD/JSON)
   - 🔄 Advanced retry strategies with exponential backoff
   - 📊 Generation statistics and caching
-- 🚀 **v0.3.1**: API testing & validation (next)
+- ✅ **v0.3.1**: Quality & Testing (Phase 3.2)
+  - 📊 Provider metrics tracking (tokens, cost, latency)
+  - 🧪 Live API testing for all providers
+  - 🔬 End-to-end generation tests
+- ✅ **v0.3.2**: Enhanced Benchmarking (Phase 3.2+)
+  - 🎨 Rich console output with colors and charts
+  - 📈 Benchmark history and trend analysis
+  - 📋 HTML/Markdown report generation
+  - 🔍 Quality analysis for generated games
+  - ⚠️ Regression detection and alerts
 - 🎯 **v1.0**: Production-ready web interface
 
 ## 🔬 Research Applications
@@ -214,7 +266,7 @@ MIT
 
 ---
 
-**Status**: `🔧 In Active Development`  
-**Version**: v0.3.0 (Stockfish Integration + Phase 3.1 Enhancements)  
+**Status**: `✅ Stable Release`  
+**Version**: v0.3.2 (Phase 3.2+ Enhanced Benchmarking Complete)  
 **Last Updated**: February 2026  
-**Tests**: 63 passing ✅
+**Tests**: 264 passing ✅
