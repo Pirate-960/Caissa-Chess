@@ -2,9 +2,9 @@
 
 > **📖 Quick Reference** | For the comprehensive architecture guide, see **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
-**Version**: 2.0  
-**Date**: February 3, 2026  
-**Status**: v0.2.0 - Multi-Provider LLM Integration Complete
+**Version**: 3.0  
+**Date**: February 2026  
+**Status**: v0.3.0 - Stockfish Integration + Phase 3.1 Enhancements Complete
 
 ---
 
@@ -161,16 +161,35 @@ if report.is_legal:
     validator.apply_move(report.move_object)
 ```
 
-#### `engine/stockfish_client.py` — (To Be Implemented)
-**Responsibility**: UCI protocol communication with Stockfish.
+#### `engine/stockfish_client.py` — The Critic Engine
+**Responsibility**: UCI protocol communication with Stockfish for tactical validation.
 
-**Expected Interface**:
+**Status**: ✅ Complete (Phase 3.1)
+
+**Key Classes**:
+- `StockfishClient` - Thread-safe UCI wrapper with graceful degradation
+- `EvaluationResult` - Dataclass holding score, mate info, PV, best move
+- `EngineMode` - Enum: ACTIVE (Stockfish available), PASSIVE (fallback)
+
+**Features**:
+- Graceful degradation to Passive Mode if Stockfish unavailable
+- Thread-safe evaluation caching for performance
+- CI/CD safe (no crashes on missing binary)
+
+**Interface**:
 ```python
 client = StockfishClient(depth=15)
-eval_before = client.evaluate(board)  # Centipawns
-# Apply move
-board.push(move)
-eval_after = client.evaluate(board)
+
+# Evaluate position
+result = client.evaluate(board)  # Returns EvaluationResult
+
+# Evaluate specific move
+analysis = client.evaluate_move(board, move)
+# Returns: {before, after, eval_change, move_quality, is_best_move}
+
+# Detection methods
+client.is_blunder(board, move, threshold=300)  # True if loses > 3 pawns
+client.is_sacrifice(board, move)  # True if material down but eval stable
 ```
 
 ---
@@ -211,11 +230,23 @@ Where:
 | Neural | 25 | ±0.3 pawns | 1.8 | Alien logic |
 | Coffee House | 5 | ±5.0 pawns | 2.0 | Chaos & gambits |
 
+**Phase 3.1 Enhancements**:
+- `ExtendedStylePreset` - 20 additional player styles (Morphy, Karpov, Kasparov, etc.)
+- `StyleBlender` - Mix multiple styles with configurable weights
+- Advanced style configuration with positional/tactical modifiers
+
 **Algorithm**:
 ```python
 slider = StyleSlider()
 config = slider.get_config(style=StylePreset.TAL)
 # Returns: depth=10, blunder_threshold=200, complexity_bias=1.5
+
+# Phase 3.1: Blend styles
+blender = StyleBlender()
+hybrid = blender.blend([
+    (StylePreset.TAL, 0.6),
+    (StylePreset.CAPABLANCA, 0.4),
+])
 ```
 
 ---
@@ -223,23 +254,43 @@ config = slider.get_config(style=StylePreset.TAL)
 ### 2.4 Export Package (`export/`)
 
 #### `export/pgn_builder.py` — The Formatter
-**Responsibility**: Professional PGN output.
+**Responsibility**: Professional PGN output with multi-format support.
+
+**Phase 3.1 Enhancements**:
+- **NAG Support**: Standard Numeric Annotation Glyphs (!!, !, ?!, $14, etc.)
+- **Variations**: Alternative lines with nested variations
+- **Multi-Format Export**: PGN, HTML, Markdown, JSON, Lichess
+
+**Key Classes**:
+- `NAG` - IntEnum of all standard annotation glyphs
+- `ExportFormat` - Enum: PGN, MARKDOWN, HTML, JSON, LICHESS
+- `MoveAnnotation` - NAG codes, comments, evaluations, clock times
+- `Variation` - Alternative line representation
+- `GameMetadata` - Extended header fields (ECO, Elo, TimeControl, etc.)
+- `AdvancedMoveEntry` - Complete move with all metadata
 
 **PGN Structure**:
 ```
 [Event "CAISSA Generation"]
+[ECO "B90"]
+[Opening "Sicilian Defense"]
 [White "Player Name"]
 [Black "Opponent Name"]
 [Result "1-0"]
 
-1. e4 e5 2. Nf3 Nc6 3. Bb5!! ...
+1. e4! {The king's pawn opening} e5 2. Nf3 Nc6 3. Bb5!! ...
 ```
 
-**Features**:
-- Header generation
-- Move annotation (!, !!, ?, ??)
-- Line breaks every 2 moves
-- File export
+**Multi-Format Export**:
+```python
+builder = PGNBuilder(white="Tal", black="Petrosian")
+builder.add_move_advanced("e4", nags=[NAG.GOOD_MOVE])
+
+print(builder.export(ExportFormat.PGN))       # Standard PGN
+print(builder.export(ExportFormat.MARKDOWN))  # Documentation-ready
+print(builder.export(ExportFormat.HTML))      # Web display
+print(builder.export(ExportFormat.JSON))      # API integration
+```
 
 ---
 
@@ -495,7 +546,71 @@ Generate games between competing personas:
 
 ---
 
-## 11. Conclusion
+## 11. Phase 3.1 Enhancements Summary
+
+### 11.1 Generator Enhancements (`core/generator.py`)
+- **RetryStrategy** - Enum: IMMEDIATE, EXPONENTIAL, LINEAR, ADAPTIVE
+- **RetryConfig** - Configurable retry behavior with jitter
+- **GenerationProgress** - Real-time progress tracking with callbacks
+- **GenerationResult** - Rich result with quality, beauty score, metadata
+- **BatchResult** - Aggregate results for multi-game generation
+- **GenerationStats** - Cumulative statistics tracking
+- **CacheEntry** - Move caching for improved performance
+
+**New Methods**:
+- `generate_game_advanced()` - Extended result information
+- `generate_batch()` - Multi-game batch generation
+- `generate_until_quality()` - Quality-threshold generation
+- `set_retry_config()`, `set_progress_callback()`
+- `cache_move()`, `get_cached_move()`, `clear_cache()`
+- `get_stats()`, `save_stats()`, `load_stats()`
+
+### 11.2 Prompt Manager Enhancements (`core/prompt_manager.py`)
+- **HistoricalPlayer** - 15 chess masters (Morphy to AlphaZero)
+- **NarrativeArc** - 7 story templates (Blitzkrieg, Comeback, Brilliancy, etc.)
+- **PromptStage** - Multi-stage generation pipeline
+- **DifficultyLevel** - Beginner to Grandmaster complexity
+- **PlayerPersonality** - Full personality profiles with style data
+- **AdvancedGameContext** - Extended context with personalities/narratives
+
+**New Methods**:
+- `build_system_prompt_advanced()` - Personality-injected prompts
+- `build_multi_stage_prompts()` - Staged generation approach
+- `build_commentary_prompt()` - GM commentary generation
+- `create_context_for_matchup()` - Historical player matchups
+
+### 11.3 Legality Enhancements (`engine/legality.py`)
+- **MoveClassification** - Tactical, positional, quiet, forcing, etc.
+- **TacticalMotif** - Fork, pin, skewer, discovered attack, etc.
+- **ValidationSeverity** - Error, warning, info, suggestion
+- **MoveQualityHint** - Quality assessment for validated moves
+- **CandidateMove** - Alternative move suggestions
+- **AdvancedLegalityReport** - Extended validation with hints
+
+**New Methods**:
+- `parse_and_validate_move_advanced()` - Full quality analysis
+- `validate_game_pgn_advanced()` - Rich game validation
+- `get_move_candidates()` - Get candidate moves by classification
+- `suggest_repairs_for_game()` - Repair suggestions for illegal moves
+
+### 11.4 PGN Builder Enhancements (`export/pgn_builder.py`)
+- **NAG** - 50+ Numeric Annotation Glyphs
+- **ExportFormat** - PGN, Markdown, HTML, JSON
+- **MoveAnnotation** - Full annotation with NAGs, comments, evals
+- **Variation** - Alternative line support
+- **GameMetadata** - Extended headers (ECO, Elo, TimeControl)
+
+**New Methods**:
+- `add_move_advanced()` - Move with annotations/variations
+- `annotate_move()` - Add annotations to existing moves
+- `add_variation()` - Add alternative lines
+- `build_pgn_advanced()` - Full-featured PGN output
+- `export_markdown()`, `export_html()`, `export_json()`
+- `generate_evaluation_annotations()` - Auto-annotate from evals
+
+---
+
+## 12. Conclusion
 
 CAISSA represents a paradigm shift in chess AI:
 
@@ -513,6 +628,6 @@ The system is modular, testable, and extensible. The foundation is solid. The fr
 
 ---
 
-**Next Phase**: Integrate Stockfish and run end-to-end generation tests.
+**Next Phase**: Phase 3.2 - Quality Analysis, Auto-Annotation System, Advanced Beauty Metrics
 
 **"We don't generate chess games. We generate immortality."** ♟️

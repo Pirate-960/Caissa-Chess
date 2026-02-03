@@ -2,9 +2,10 @@
 
 > **📖 Quick Reference** | For the comprehensive roadmap, see **[docs/ROADMAP.md](docs/ROADMAP.md)**
 
-**Project Status**: `v0.2.0 - Multi-Provider LLM Integration Complete`  
-**Previous**: `v0.1.0 - Core Architecture Complete`
-**Last Updated**: February 3, 2026
+**Project Status**: `v0.3.0 - Stockfish Integration + Phase 3.1 Enhancements Complete`  
+**Previous**: `v0.2.0 - Multi-Provider LLM Integration Complete`
+**Last Updated**: February 2026
+**Tests**: 63 passing ✅
 
 ---
 
@@ -139,26 +140,39 @@ python caissa.py generate --style romantic --aggression 8 --output game.pgn
 - [x] Comprehensive documentation (docs/ folder)
 - [x] CI/CD pipeline with GitHub Actions
 
-### v0.2.1 🚀 - API Testing & Validation (IN PROGRESS)
+### v0.3.0 ✅ - Stockfish Integration + Phase 3.1 (COMPLETE)
+- [x] `engine/stockfish_client.py` - UCI protocol wrapper with graceful degradation
+- [x] Thread-safe evaluation caching
+- [x] CI/CD safe (Passive Mode when binary unavailable)
+- [x] `setup_stockfish.py` - Cross-platform setup helper
+- [x] 63 tests passing (100%)
+
+**Phase 3.1 Enhancements (COMPLETE)**:
+- [x] **Batch Generation**: `generate_batch()` with progress tracking
+- [x] **Advanced Retry**: `RetryStrategy` (exponential, linear, adaptive)
+- [x] **Generation Stats**: `GenerationStats` with caching support
+- [x] **15 Historical Players**: Morphy, Tal, Capablanca, Fischer, Kasparov, AlphaZero, etc.
+- [x] **7 Narrative Arcs**: Blitzkrieg, Comeback, Slow Squeeze, Brilliancy, etc.
+- [x] **Multi-Stage Prompts**: Concept → Opening → Development → Climax → Conclusion
+- [x] **NAG Annotations**: 50+ standard annotation glyphs
+- [x] **Multi-Format Export**: PGN, Markdown, HTML, JSON
+- [x] **Move Quality Hints**: Classification, tactical motifs, quality scores
+- [x] **Advanced Legality**: Candidate moves, repair suggestions
+
+### v0.3.1 🚀 - Quality & Testing (IN PROGRESS)
 - [ ] Live API testing for all providers
 - [ ] Response quality benchmarking
 - [ ] Performance/latency metrics
 - [ ] Cost analysis per provider
+- [ ] End-to-end generation tests
 
-### v0.3.0 (Planned) - Stockfish Integration
-- [ ] UCI protocol wrapper
-- [ ] Real-time evaluation
-- [ ] Sanity checking algorithm
-- [ ] Dynamic style adjustment
-- [ ] Performance optimization
-
-### v0.5.0 (Month 2) - Quality & Analysis
+### v0.5.0 (Planned) - Quality & Analysis
 - [ ] Turing test mode (distinguish from real games)
 - [ ] Auto-annotation system (GM commentary)
 - [ ] Game memory/caching
 - [ ] Advanced beauty metrics
 
-### v1.0.0 (Month 3) - Production Ready
+### v1.0.0 (Planned) - Production Ready
 - [ ] Web interface (Flask/FastAPI)
 - [ ] Real-time game visualization
 - [ ] Game database and search
@@ -181,14 +195,15 @@ python caissa.py generate --style romantic --aggression 8 --output game.pgn
 
 | File | Role | Status |
 |------|------|--------|
-| `core/prompt_manager.py` | Creative direction | ✅ Complete |
+| `core/prompt_manager.py` | Creative direction + 15 player personalities | ✅ Complete |
 | `core/llm_provider.py` | Multi-provider LLM abstraction | ✅ Complete (v0.2.0) |
-| `core/generator.py` | Orchestration | ✅ Complete |
-| `engine/legality.py` | Legal enforcement | ✅ Complete |
+| `core/generator.py` | Orchestration + batch generation + stats | ✅ Complete |
+| `core/board_state.py` | Board tracking + game phase analysis | ✅ Complete |
+| `engine/legality.py` | Legal enforcement + quality hints | ✅ Complete |
+| `engine/stockfish_client.py` | Engine integration (UCI) | ✅ Complete (v0.3.0) |
 | `aesthetic/beauty_eval.py` | Aesthetic scoring | ✅ Complete |
-| `aesthetic/style_slider.py` | Style presets | ✅ Complete |
-| `engine/stockfish_client.py` | Engine integration | ⏳ Pending (v0.3.0) |
-| `export/pgn_builder.py` | PGN output | ✅ Complete |
+| `aesthetic/style_slider.py` | Style presets + blending | ✅ Complete |
+| `export/pgn_builder.py` | PGN/HTML/MD/JSON export | ✅ Complete |
 | `export/markdown_report.py` | Game narrative | ⏳ Pending |
 | `export/gif_generator.py` | Board visualization | ⏳ Pending |
 

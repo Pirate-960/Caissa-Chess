@@ -130,6 +130,59 @@ See `docs/beauty_metric.md` for the full mathematical framework.
 | **Coffee House** | Very Low | Very High | Gambits and tricks |
 | **Neural** | Max | Zero | AlphaZero-style sacrifices |
 
+### 🎭 Historical Player Personalities (Phase 3.1)
+
+Generate games in the style of legendary chess masters:
+
+| Player | Era | Style | Aggression |
+|--------|-----|-------|------------|
+| **Morphy** | Romantic | Classical development, rapid attacks | 7/10 |
+| **Tal** | Soviet | Wild sacrifices, magical combinations | 9/10 |
+| **Capablanca** | Classical | Crystal-clear logic, endgame perfection | 4/10 |
+| **Fischer** | Computer | Perfect calculation, crushing technique | 7/10 |
+| **Kasparov** | Computer | Relentless attacking power | 8/10 |
+| **Carlsen** | Neural | Universal style, grinding technique | 5/10 |
+| **AlphaZero** | Neural | Alien logic, long-term sacrifices | 6/10 |
+
+## 🚀 Phase 3.1 Features
+
+### Batch Generation
+```python
+from core.generator import CaissaGenerator, RetryConfig, RetryStrategy
+
+generator = CaissaGenerator(provider)
+generator.set_retry_config(RetryConfig(
+    strategy=RetryStrategy.EXPONENTIAL,
+    max_retries=5,
+))
+
+# Generate multiple games
+batch_result = generator.generate_batch(contexts)
+print(f"Success rate: {batch_result.success_rate:.1%}")
+```
+
+### Multi-Format Export
+```python
+from export.pgn_builder import PGNBuilder, ExportFormat, NAG
+
+builder = PGNBuilder(white="Tal", black="Petrosian")
+builder.add_move_advanced("e4", nags=[NAG.GOOD_MOVE], comment="The king's pawn")
+builder.add_move_advanced("c5")  # Sicilian!
+
+# Export in multiple formats
+print(builder.export(ExportFormat.PGN))
+print(builder.export(ExportFormat.MARKDOWN))
+print(builder.export(ExportFormat.HTML))
+print(builder.export(ExportFormat.JSON))
+```
+
+### Narrative Arcs
+Generate games with story structure:
+- **Blitzkrieg** - Fast, overwhelming attack
+- **The Comeback** - Near-loss turned into victory
+- **The Slow Squeeze** - Gradual positional domination
+- **The Brilliancy** - Single stunning move turns game
+
 ## 📋 Development Roadmap
 
 See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
@@ -137,8 +190,13 @@ See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
 **Current Status**: 
 - ✅ **v0.1**: Core generation pipeline (legality validation)
 - ✅ **v0.2**: Multi-provider LLM support (6 providers, 49 tests passing)
-- 🚀 **v0.2.1**: API testing & validation (next)
-- 📋 **v0.3**: Stockfish integration (planned)
+- ✅ **v0.3**: Stockfish integration complete + Phase 3.1 enhancements
+  - 🎯 Batch generation with progress tracking
+  - 🎭 15 historical player personalities
+  - 📝 NAG annotations & multi-format export (PGN/HTML/MD/JSON)
+  - 🔄 Advanced retry strategies with exponential backoff
+  - 📊 Generation statistics and caching
+- 🚀 **v0.3.1**: API testing & validation (next)
 - 🎯 **v1.0**: Production-ready web interface
 
 ## 🔬 Research Applications
@@ -157,5 +215,6 @@ MIT
 ---
 
 **Status**: `🔧 In Active Development`  
-**Version**: v0.2.0 (Multi-Provider LLM Integration)  
-**Last Updated**: February 3, 2026
+**Version**: v0.3.0 (Stockfish Integration + Phase 3.1 Enhancements)  
+**Last Updated**: February 2026  
+**Tests**: 63 passing ✅

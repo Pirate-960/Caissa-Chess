@@ -70,7 +70,7 @@ Input: GameContext (era, theme, style, aggression)
    ▼ (Sound)
 ┌──────────────────────────────────────────────────┐
 │ 4. THE CURATOR (Beauty Evaluation) [ENHANCED]    │
-│    Score = Stockfish analysis + Style weighting │
+│    Score = Stockfish analysis + Style weighting  │
 │    Sacrifice bonus, Drama bonus, Accuracy bonus  │
 └──────────────────────────────────────────────────┘
    │
