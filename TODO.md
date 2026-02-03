@@ -8,7 +8,7 @@
 
 ## 🟢 Completed ✅
 
-### v0.2.0 - Multi-Provider LLM Integration (February 2026)
+### v0.1.0 - Core Architecture (January 2026)
 - [x] Project structure initialized
 - [x] Core pipeline architecture designed
 - [x] Prompt manager with 6 eras + 8 themes
@@ -1066,7 +1066,7 @@
 ### Version History
 | Version | Name | Status | Completion | Date |
 |---------|------|--------|------------|------|
-| v0.2.0 | Multi-Provider LLM Integration | ✅ Complete | 100% | Feb 3, 2026 |
+| v0.1.0 | Core Architecture | ✅ Complete | 100% | Jan 31, 2026 |
 | v0.2.0 | Multi-Provider LLM | ✅ Complete | 100% | Feb 2, 2026 |
 | v0.2.1 | API Testing & Validation | 🟡 In Progress | 0% | Feb 2026 |
 | v0.3.0 | Stockfish Integration | 🔵 Planned | 0% | Feb-Mar 2026 |
@@ -1089,7 +1089,7 @@
 
 ### Milestone Tracking
 ```
-✅ v0.2.0: Multi-Provider LLM Integration [██████████] 100%
+✅ v0.1.0: Core Architecture        [██████████] 100%
 ✅ v0.2.0: Multi-Provider LLM       [██████████] 100%
 🟡 v0.2.1: API Testing              [░░░░░░░░░░]   0%
 🔵 v0.3.0: Stockfish Integration    [░░░░░░░░░░]   0%
@@ -1099,7 +1099,7 @@
 
 ### Estimated Timeline (Updated)
 ```
-Feb 3, 2026: v0.2.0 - Multi-Provider LLM Integration ✅ COMPLETE
+Jan 31, 2026: v0.1.0 - Core Architecture      ✅ COMPLETE
 Feb  2, 2026: v0.2.0 - Multi-Provider LLM     ✅ COMPLETE
 Feb  9, 2026: v0.2.1 - API Testing & Validation
 Feb 21, 2026: v0.3.0 - Stockfish Integration
