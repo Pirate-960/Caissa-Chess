@@ -480,11 +480,22 @@ class StockfishClient:
                 logger.error(f"Error closing engine: {str(e)}")
         
         self.engine = None
-    
+
+    def close(self) -> None:
+        """Alias for quit() - gracefully shutdown engine."""
+        self.quit()
+
+    def __del__(self):
+        """Destructor - ensure engine is closed on garbage collection."""
+        try:
+            self.quit()
+        except Exception:
+            pass  # Ignore errors during destruction
+
     def __enter__(self):
         """Context manager support."""
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager cleanup."""
         self.quit()

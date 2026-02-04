@@ -14,7 +14,8 @@ For live API tests, use test_live_providers.py with --run-live flag.
 
 import unittest
 import json
-from typing import Optional
+import gc
+from typing import Optional, List
 from dataclasses import dataclass
 
 from core.generator import (
@@ -95,16 +96,45 @@ This features the Spanish Opening."""
 
 
 # =============================================================================
+# BASE TEST CLASS WITH CLEANUP
+# =============================================================================
+
+class GeneratorTestCase(unittest.TestCase):
+    """Base test case that tracks and cleans up CaissaGenerator instances."""
+    
+    def setUp(self):
+        """Initialize generator tracking."""
+        self._generators: List[CaissaGenerator] = []
+    
+    def tearDown(self):
+        """Clean up all created generators to prevent orphan Stockfish processes."""
+        for generator in self._generators:
+            try:
+                generator.close()
+            except Exception:
+                pass  # Ignore cleanup errors
+        self._generators.clear()
+        # Force garbage collection to clean up any remaining resources
+        gc.collect()
+    
+    def create_generator(self, **kwargs) -> CaissaGenerator:
+        """Create a generator and track it for cleanup."""
+        generator = CaissaGenerator(**kwargs)
+        self._generators.append(generator)
+        return generator
+
+
+# =============================================================================
 # UNIT TESTS
 # =============================================================================
 
-class TestGeneratorWithMock(unittest.TestCase):
+class TestGeneratorWithMock(GeneratorTestCase):
     """Test CaissaGenerator with MockProvider."""
     
     def test_successful_generation(self):
         """Test successful game generation."""
         mock = MockProvider(responses=[VALID_SHORT_GAME])
-        generator = CaissaGenerator()
+        generator = self.create_generator()
         generator.set_provider(mock)
         
         context = GameContext(era=GameEra.ROMANTIC)
@@ -117,7 +147,7 @@ class TestGeneratorWithMock(unittest.TestCase):
     def test_generation_with_context(self):
         """Test generation with GameContext."""
         mock = MockProvider(responses=[VALID_TACTICAL_GAME])
-        generator = CaissaGenerator()
+        generator = self.create_generator()
         generator.set_provider(mock)
         
         context = GameContext(
@@ -135,7 +165,7 @@ class TestGeneratorWithMock(unittest.TestCase):
         """Test self-correction when first response is invalid."""
         # First response is invalid, second is valid
         mock = MockProvider(responses=[INVALID_GAME, VALID_SHORT_GAME])
-        generator = CaissaGenerator(max_retries=3)
+        generator = self.create_generator(max_retries=3)
         generator.set_provider(mock)
         
         context = GameContext(era=GameEra.ROMANTIC)
@@ -150,7 +180,7 @@ class TestGeneratorWithMock(unittest.TestCase):
         # All responses are invalid - but generator may still process them
         # The key test is that it doesn't crash and returns proper types
         mock = MockProvider(responses=[INVALID_GAME, INVALID_GAME, INVALID_GAME])
-        generator = CaissaGenerator(max_retries=2)
+        generator = self.create_generator(max_retries=2)
         generator.set_provider(mock)
         
         context = GameContext(era=GameEra.ROMANTIC)
@@ -163,7 +193,7 @@ class TestGeneratorWithMock(unittest.TestCase):
     def test_pgn_cleaning(self):
         """Test PGN extraction from responses with extra text."""
         mock = MockProvider(responses=[GAME_WITH_PREAMBLE])
-        generator = CaissaGenerator()
+        generator = self.create_generator()
         generator.set_provider(mock)
         
         context = GameContext(era=GameEra.ROMANTIC)
@@ -382,7 +412,7 @@ class TestBeautyEvaluatorIntegration(unittest.TestCase):
             self.skipTest("Could not parse PGN games")
 
 
-class TestFullPipeline(unittest.TestCase):
+class TestFullPipeline(GeneratorTestCase):
     """End-to-end pipeline tests."""
     
     def test_complete_generation_pipeline(self):
@@ -392,7 +422,7 @@ class TestFullPipeline(unittest.TestCase):
         
         # Setup
         mock = MockProvider(responses=[VALID_TACTICAL_GAME])
-        generator = CaissaGenerator()
+        generator = self.create_generator()
         generator.set_provider(mock)
         validator = LegalityValidator()
         evaluator = BeautyEvaluator()
@@ -434,7 +464,7 @@ class TestFullPipeline(unittest.TestCase):
             VALID_TACTICAL_GAME,
             VALID_LONG_GAME,
         ])
-        generator = CaissaGenerator()
+        generator = self.create_generator()
         generator.set_provider(mock)
         
         # Generate batch
@@ -456,7 +486,7 @@ class TestFullPipeline(unittest.TestCase):
     def test_generation_with_advanced_context(self):
         """Test generation with AdvancedGameContext."""
         mock = MockProvider(responses=[VALID_TACTICAL_GAME])
-        generator = CaissaGenerator()
+        generator = self.create_generator()
         generator.set_provider(mock)
         prompt_manager = PromptManager()
         
@@ -482,7 +512,7 @@ class TestFullPipeline(unittest.TestCase):
     def test_retry_config_integration(self):
         """Test RetryConfig with generator."""
         mock = MockProvider(responses=[INVALID_GAME, VALID_SHORT_GAME])
-        generator = CaissaGenerator()
+        generator = self.create_generator()
         generator.set_provider(mock)
         
         config = RetryConfig(
@@ -501,7 +531,7 @@ class TestFullPipeline(unittest.TestCase):
     def test_progress_tracking(self):
         """Test progress tracking during generation."""
         mock = MockProvider(responses=[VALID_SHORT_GAME])
-        generator = CaissaGenerator()
+        generator = self.create_generator()
         generator.set_provider(mock)
         
         progress_updates = []

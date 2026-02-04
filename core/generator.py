@@ -356,7 +356,32 @@ class CaissaGenerator:
         """
         self.provider = provider
         logger.info(f"Provider set: {type(provider).__name__}")
-    
+
+    def close(self) -> None:
+        """
+        Clean up resources (especially Stockfish engine).
+        
+        Should be called when done with the generator to prevent orphan processes.
+        """
+        if hasattr(self, 'stockfish') and self.stockfish:
+            self.stockfish.quit()
+            logger.info("Generator closed, Stockfish engine terminated")
+
+    def __enter__(self):
+        """Context manager support."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager cleanup."""
+        self.close()
+
+    def __del__(self):
+        """Destructor - ensure Stockfish is closed on garbage collection."""
+        try:
+            self.close()
+        except Exception:
+            pass  # Ignore errors during destruction
+
     def _validate_move(
         self,
         board: chess.Board,
