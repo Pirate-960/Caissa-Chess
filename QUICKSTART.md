@@ -395,6 +395,6 @@ Welcome to the future of chess. 🚀
 
 ---
 
-**Status**: v0.2.0 - Multi-provider LLM integration complete  
+**Status**: v0.3.2 - Phase 3.2+ Enhanced Benchmarking Complete  
 **Last Updated**: February 3, 2026  
 **License**: MIT

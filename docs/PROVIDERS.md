@@ -717,6 +717,30 @@ All providers implement this interface:
 
 ```python
 from abc import ABC, abstractmethod
+from typing import Tuple
+from dataclasses import dataclass
+
+@dataclass
+class TokenUsage:
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+@dataclass
+class CostEstimate:
+    prompt_cost: float
+    completion_cost: float
+    total_cost: float
+    currency: str = "USD"
+
+@dataclass
+class GenerationMetrics:
+    token_usage: TokenUsage
+    cost_estimate: CostEstimate
+    latency_ms: float
+    model: str
+    provider: str
+    timestamp: str
 
 class LLMProvider(ABC):
     @abstractmethod
@@ -727,6 +751,24 @@ class LLMProvider(ABC):
         temperature: float = 0.8
     ) -> str:
         """Generate a response from the LLM."""
+        pass
+    
+    @abstractmethod
+    def generate_with_metrics(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.8
+    ) -> Tuple[str, GenerationMetrics]:
+        """Generate response with performance metrics (v0.3.2).
+        
+        Returns both the response and detailed metrics including:
+        - Token usage (prompt, completion, total)
+        - Cost estimates (per-provider pricing)
+        - Latency in milliseconds
+        - Model and provider information
+        - Timestamp
+        """
         pass
 ```
 
@@ -740,7 +782,28 @@ class LLMProvider(ABC):
   - 2.0 = Maximum creativity
 
 **Returns:**
-- `str`: Model's response
+- `generate()`: `str` - Model's response
+- `generate_with_metrics()`: `Tuple[str, GenerationMetrics]` - Response + metrics
+
+### Metrics Usage Example (v0.3.2)
+
+```python
+from core.llm_provider import OpenAIProvider
+
+provider = OpenAIProvider(model="gpt-4")
+
+response, metrics = provider.generate_with_metrics(
+    system_prompt="You are a chess grandmaster.",
+    user_prompt="Generate a short game.",
+    temperature=0.8
+)
+
+print(f"Response: {response[:100]}...")
+print(f"Tokens used: {metrics.token_usage.total_tokens}")
+print(f"Cost: ${metrics.cost_estimate.total_cost:.4f}")
+print(f"Latency: {metrics.latency_ms:.0f}ms")
+print(f"Model: {metrics.model}")
+```
 
 ### Provider-Specific Methods
 

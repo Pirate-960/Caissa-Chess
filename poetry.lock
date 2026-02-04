@@ -2116,6 +2116,18 @@ pure-eval = "*"
 tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
+name = "stockfish"
+version = "3.28.0"
+description = "Wraps the open-source Stockfish chess engine for easy integration into python."
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "stockfish-3.28.0-py3-none-any.whl", hash = "sha256:e432e57112448fe1271dff402db3a4747bf00d1721815ce0a36cfa26582cf360"},
+    {file = "stockfish-3.28.0.tar.gz", hash = "sha256:8764127c00434aa85b7fca1c064800e7ea907bb3626ccd4b583f0e911b014070"},
+]
+
+[[package]]
 name = "tenacity"
 version = "8.5.0"
 description = "Retry code until it succeeds"
@@ -2290,4 +2302,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.13"
-content-hash = "92e51a781eb8c7834c540d5e5499e33ef1d97024017d37d43f766d2e8902e82e"
+content-hash = "16c9b11bced8efabbc803d0433f9dc88baf7ab7c797ebd179685e5ed26bd62a3"

@@ -3,12 +3,25 @@ core/llm_provider.py
 
 Abstract provider interface for LLM integration.
 Supports OpenAI, Anthropic, Azure OpenAI, Google Gemini, local models (Ollama), and mock providers.
+
+PHASE 3.2 ENHANCEMENTS:
+- ProviderMetrics for tracking latency, tokens, costs
+- GenerationMetrics returned with each response
+- Cost estimation per provider/model
+- Token usage tracking
+- Performance analytics
+
+Original functionality 100% preserved.
 """
 
 import os
 import logging
+import time
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Dict, Any, Tuple
+from dataclasses import dataclass, field, asdict
+from datetime import datetime
+from enum import Enum
 
 from openai import OpenAI, AzureOpenAI, RateLimitError, APIConnectionError
 from tenacity import (
@@ -22,13 +35,218 @@ from tenacity import (
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# PHASE 3.2: METRICS AND TRACKING
+# =============================================================================
+
+class CostTier(str, Enum):
+    """Cost tiers for different models."""
+    FREE = "free"           # Local models (Ollama)
+    BUDGET = "budget"       # GPT-3.5, Claude Haiku
+    STANDARD = "standard"   # GPT-4o-mini, Claude Sonnet
+    PREMIUM = "premium"     # GPT-4, Claude Opus
+
+
+@dataclass
+class TokenUsage:
+    """Token usage for a single generation."""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
+    
+    def to_dict(self) -> Dict[str, int]:
+        return {
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens,
+        }
+
+
+@dataclass
+class CostEstimate:
+    """Cost estimate for a generation."""
+    input_cost_usd: float = 0.0
+    output_cost_usd: float = 0.0
+    
+    @property
+    def total_cost_usd(self) -> float:
+        return self.input_cost_usd + self.output_cost_usd
+    
+    def to_dict(self) -> Dict[str, float]:
+        return {
+            "input_cost_usd": self.input_cost_usd,
+            "output_cost_usd": self.output_cost_usd,
+            "total_cost_usd": self.total_cost_usd,
+        }
+
+
+@dataclass
+class GenerationMetrics:
+    """Metrics for a single generation call."""
+    latency_ms: float = 0.0
+    tokens: TokenUsage = field(default_factory=TokenUsage)
+    cost: CostEstimate = field(default_factory=CostEstimate)
+    model: str = ""
+    provider: str = ""
+    success: bool = True
+    error_message: Optional[str] = None
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "latency_ms": self.latency_ms,
+            "tokens": self.tokens.to_dict(),
+            "cost": self.cost.to_dict(),
+            "model": self.model,
+            "provider": self.provider,
+            "success": self.success,
+            "error_message": self.error_message,
+            "timestamp": self.timestamp,
+        }
+
+
+@dataclass
+class ProviderMetrics:
+    """Aggregate metrics for a provider."""
+    provider_name: str
+    model: str
+    total_calls: int = 0
+    successful_calls: int = 0
+    failed_calls: int = 0
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_cost_usd: float = 0.0
+    total_latency_ms: float = 0.0
+    min_latency_ms: float = float('inf')
+    max_latency_ms: float = 0.0
+    
+    @property
+    def success_rate(self) -> float:
+        if self.total_calls == 0:
+            return 0.0
+        return self.successful_calls / self.total_calls
+    
+    @property
+    def avg_latency_ms(self) -> float:
+        if self.successful_calls == 0:
+            return 0.0
+        return self.total_latency_ms / self.successful_calls
+    
+    @property
+    def total_tokens(self) -> int:
+        return self.total_input_tokens + self.total_output_tokens
+    
+    def record_call(self, metrics: GenerationMetrics) -> None:
+        """Record a generation call."""
+        self.total_calls += 1
+        
+        if metrics.success:
+            self.successful_calls += 1
+            self.total_input_tokens += metrics.tokens.input_tokens
+            self.total_output_tokens += metrics.tokens.output_tokens
+            self.total_cost_usd += metrics.cost.total_cost_usd
+            self.total_latency_ms += metrics.latency_ms
+            self.min_latency_ms = min(self.min_latency_ms, metrics.latency_ms)
+            self.max_latency_ms = max(self.max_latency_ms, metrics.latency_ms)
+        else:
+            self.failed_calls += 1
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "provider_name": self.provider_name,
+            "model": self.model,
+            "total_calls": self.total_calls,
+            "successful_calls": self.successful_calls,
+            "failed_calls": self.failed_calls,
+            "success_rate": self.success_rate,
+            "total_tokens": self.total_tokens,
+            "total_cost_usd": self.total_cost_usd,
+            "avg_latency_ms": self.avg_latency_ms,
+            "min_latency_ms": self.min_latency_ms if self.min_latency_ms != float('inf') else 0.0,
+            "max_latency_ms": self.max_latency_ms,
+        }
+    
+    def reset(self) -> None:
+        """Reset all metrics."""
+        self.total_calls = 0
+        self.successful_calls = 0
+        self.failed_calls = 0
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+        self.total_cost_usd = 0.0
+        self.total_latency_ms = 0.0
+        self.min_latency_ms = float('inf')
+        self.max_latency_ms = 0.0
+
+
+# Model pricing (per 1M tokens: input, output)
+MODEL_PRICING: Dict[str, Tuple[float, float]] = {
+    # OpenAI
+    "gpt-4-turbo": (10.0, 30.0),
+    "gpt-4o": (5.0, 15.0),
+    "gpt-4o-mini": (0.15, 0.60),
+    "gpt-4": (30.0, 60.0),
+    "gpt-3.5-turbo": (0.50, 1.50),
+    # Anthropic
+    "claude-3-opus": (15.0, 75.0),
+    "claude-3-sonnet": (3.0, 15.0),
+    "claude-3-haiku": (0.25, 1.25),
+    "claude-3-5-sonnet": (3.0, 15.0),
+    # Google
+    "gemini-pro": (0.50, 1.50),
+    "gemini-1.5-pro": (3.50, 10.50),
+    "gemini-1.5-flash": (0.075, 0.30),
+    # Local
+    "ollama": (0.0, 0.0),
+    "llama2": (0.0, 0.0),
+    "mistral": (0.0, 0.0),
+    "codellama": (0.0, 0.0),
+}
+
+
+def estimate_cost(model: str, input_tokens: int, output_tokens: int) -> CostEstimate:
+    """Estimate cost for given model and token counts."""
+    # Find matching pricing
+    input_price, output_price = 0.15, 0.60  # Default to GPT-4o-mini
+    model_lower = model.lower()
+    
+    # First try exact match
+    if model_lower in MODEL_PRICING:
+        input_price, output_price = MODEL_PRICING[model_lower]
+    else:
+        # Then try substring match, preferring longer keys first
+        sorted_keys = sorted(MODEL_PRICING.keys(), key=len, reverse=True)
+        for model_key in sorted_keys:
+            if model_key.lower() in model_lower:
+                input_price, output_price = MODEL_PRICING[model_key]
+                break
+    
+    return CostEstimate(
+        input_cost_usd=(input_tokens / 1_000_000) * input_price,
+        output_cost_usd=(output_tokens / 1_000_000) * output_price,
+    )
+
+
+def estimate_tokens(text: str) -> int:
+    """Rough token estimate (average ~4 chars per token)."""
+    return len(text) // 4
+
+
 class LLMProvider(ABC):
     """
     Abstract base class for LLM providers.
     
     Defines the interface that all concrete providers must implement.
     This allows swapping between OpenAI, Anthropic, local models, etc.
+    
+    PHASE 3.2: Added metrics tracking and generate_with_metrics method.
     """
+    
+    # Provider metrics (class-level, shared across instances)
+    _metrics: Optional[ProviderMetrics] = None
 
     @abstractmethod
     def generate(
@@ -52,6 +270,80 @@ class LLMProvider(ABC):
             Exception: If the LLM call fails after retries
         """
         pass
+    
+    def generate_with_metrics(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.8
+    ) -> Tuple[str, GenerationMetrics]:
+        """
+        Generate a response and return metrics.
+        
+        PHASE 3.2: New method for tracked generation.
+        
+        Args:
+            system_prompt: The system/instruction prompt
+            user_prompt: The user's actual request/query
+            temperature: Sampling temperature
+        
+        Returns:
+            Tuple of (response text, generation metrics)
+        """
+        provider_name = self.__class__.__name__.replace("Provider", "")
+        model = getattr(self, "model", getattr(self, "deployment_name", "unknown"))
+        
+        metrics = GenerationMetrics(
+            model=model,
+            provider=provider_name,
+        )
+        
+        start_time = time.perf_counter()
+        
+        try:
+            response = self.generate(system_prompt, user_prompt, temperature)
+            metrics.latency_ms = (time.perf_counter() - start_time) * 1000
+            metrics.success = True
+            
+            # Estimate tokens
+            input_tokens = estimate_tokens(system_prompt + user_prompt)
+            output_tokens = estimate_tokens(response)
+            metrics.tokens = TokenUsage(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
+            metrics.cost = estimate_cost(model, input_tokens, output_tokens)
+            
+            # Record in aggregate metrics
+            if self._metrics:
+                self._metrics.record_call(metrics)
+            
+            return response, metrics
+            
+        except Exception as e:
+            metrics.latency_ms = (time.perf_counter() - start_time) * 1000
+            metrics.success = False
+            metrics.error_message = str(e)
+            
+            if self._metrics:
+                self._metrics.record_call(metrics)
+            
+            raise
+    
+    def get_metrics(self) -> Optional[ProviderMetrics]:
+        """Get aggregate metrics for this provider."""
+        return self._metrics
+    
+    def reset_metrics(self) -> None:
+        """Reset aggregate metrics."""
+        if self._metrics:
+            self._metrics.reset()
+    
+    def enable_metrics(self) -> None:
+        """Enable metrics tracking for this provider."""
+        provider_name = self.__class__.__name__.replace("Provider", "")
+        model = getattr(self, "model", getattr(self, "deployment_name", "unknown"))
+        self._metrics = ProviderMetrics(provider_name=provider_name, model=model)
 
 
 class OpenAIProvider(LLMProvider):
@@ -62,13 +354,15 @@ class OpenAIProvider(LLMProvider):
     - Exponential backoff for rate limits
     - Automatic retry on network errors
     - Configurable model selection
+    - PHASE 3.2: Metrics tracking
     """
 
     def __init__(
         self, 
         api_key: Optional[str] = None,
         model: str = "gpt-4-turbo",
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
+        track_metrics: bool = False
     ):
         """
         Initialize OpenAI provider.
@@ -77,6 +371,7 @@ class OpenAIProvider(LLMProvider):
             api_key: OpenAI API key (if None, reads from OPENAI_API_KEY env var)
             model: Model to use (default: gpt-4-turbo)
             max_tokens: Maximum tokens to generate
+            track_metrics: Enable metrics tracking (Phase 3.2)
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
@@ -88,6 +383,10 @@ class OpenAIProvider(LLMProvider):
         self.client = OpenAI(api_key=self.api_key)
         self.model = model
         self.max_tokens = max_tokens
+        
+        # PHASE 3.2: Initialize metrics if tracking enabled
+        if track_metrics:
+            self.enable_metrics()
         
         logger.info(f"Initialized OpenAIProvider with model: {model}")
 

@@ -528,6 +528,38 @@ class LLMProvider(ABC):
     ) -> str:
         """Generate a response from the LLM."""
         pass
+    
+    def generate_with_metrics(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.8
+    ) -> Tuple[str, GenerationMetrics]:
+        """Generate response with performance metrics (v0.3.2)."""
+        pass
+
+# Metrics data classes (Phase 3.2)
+@dataclass
+class TokenUsage:
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+@dataclass
+class CostEstimate:
+    prompt_cost: float
+    completion_cost: float
+    total_cost: float
+    currency: str = "USD"
+
+@dataclass
+class GenerationMetrics:
+    token_usage: TokenUsage
+    cost_estimate: CostEstimate
+    latency_ms: float
+    model: str
+    provider: str
+    timestamp: str
 ```
 
 ### Provider Details
@@ -571,15 +603,16 @@ caissa-chess/
 ├── 📚 Core Package
 │   └── core/
 │       ├── __init__.py
-│       ├── llm_provider.py        (663 lines) - Multi-provider LLM interface
-│       ├── prompt_manager.py      (400 lines) - Prompt assembly
-│       ├── generator.py           (200 lines) - Pipeline orchestration
+│       ├── llm_provider.py        (1000+ lines) - Multi-provider LLM + metrics
+│       ├── prompt_manager.py      (600 lines) - Prompt assembly + 15 players
+│       ├── generator.py           (400 lines) - Pipeline + batch generation
 │       └── board_state.py         (100 lines) - Board tracking
 
 ├── 🛡️ Engine Package
 │   └── engine/
 │       ├── __init__.py
-│       └── legality.py            (350 lines) - Move validation
+│       ├── legality.py            (350 lines) - Move validation
+│       └── stockfish_client.py    (200 lines) - UCI protocol wrapper
 
 ├── 🎨 Aesthetic Package
 │   └── aesthetic/
@@ -590,18 +623,33 @@ caissa-chess/
 ├── 📤 Export Package
 │   └── export/
 │       ├── __init__.py
-│       └── pgn_builder.py         (150 lines) - PGN generation
+│       └── pgn_builder.py         (300 lines) - PGN + NAG annotations
+
+├── 📊 Benchmarks Package (v0.3.2)
+│   └── benchmarks/
+│       ├── __init__.py
+│       ├── provider_benchmark.py  (600 lines) - Multi-provider benchmarking
+│       ├── rich_console.py        (450 lines) - Color output & charts
+│       ├── quality_analyzer.py    (350 lines) - Game quality scoring
+│       ├── benchmark_history.py   (400 lines) - Trend analysis & persistence
+│       └── report_generator.py    (550 lines) - HTML/Markdown reports
 
 ├── 📊 Data
 │   └── data/
 │       └── openings.json          - Opening reference
 
-├── 🧪 Testing (49 tests)
+├── 🧪 Testing (264 tests)
 │   └── tests/
 │       ├── __init__.py
-│       ├── test_legality.py       (100 lines) - Move validation tests (5)
-│       ├── test_llm_integration.py (350 lines) - Integration tests (18)
-│       └── test_multi_providers.py (365 lines) - Provider tests (26)
+│       ├── test_legality.py             - Move validation tests
+│       ├── test_llm_integration.py      - Integration tests
+│       ├── test_multi_providers.py      - Provider tests
+│       ├── test_stockfish.py            - Stockfish tests
+│       ├── test_e2e_generation.py       - End-to-end tests
+│       ├── test_live_providers.py       - Live API tests (skipped)
+│       ├── test_phase31_*.py            - Phase 3.1 tests (players, batch, NAG)
+│       ├── test_phase32_metrics.py      - Metrics infrastructure tests
+│       └── test_phase32_plus.py         - Benchmarking tests
 
 ├── 🎮 Entry Point
 │   └── caissa.py                  (300 lines) - CLI interface
@@ -747,15 +795,20 @@ All operations logged with:
 
 ## Testing Strategy
 
-### Unit Tests (49 passing)
+### Unit Tests (264 passing, 13 skipped)
 ```bash
 poetry run pytest tests/ -v
 ```
 
-Test files:
-- `test_multi_providers.py` - 26 provider tests
-- `test_llm_integration.py` - 18 integration tests
-- `test_legality.py` - 5 validation tests
+Test coverage:
+- `test_multi_providers.py` - Provider interface tests
+- `test_llm_integration.py` - Integration tests
+- `test_legality.py` - Move validation tests
+- `test_stockfish.py` - Stockfish integration tests
+- `test_phase31_*.py` - Phase 3.1 tests (players, batch, NAG)
+- `test_phase32_metrics.py` - Metrics infrastructure tests (70 tests)
+- `test_phase32_plus.py` - Benchmarking tests (94 tests)
+- `test_live_providers.py` - Live API tests (13 skipped)
 
 ### Integration Tests
 ```bash

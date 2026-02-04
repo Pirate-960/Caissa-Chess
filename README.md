@@ -46,6 +46,7 @@ Caissa-Chess/
 ├── core/                    # Main generation pipeline
 │   ├── generator.py         # Primary orchestrator
 │   ├── board_state.py       # Chess board wrapper
+│   ├── llm_provider.py      # Multi-provider LLM abstraction + metrics
 │   └── prompt_manager.py    # Dynamic prompt assembly
 │
 ├── engine/                  # Validation & analysis
@@ -58,6 +59,13 @@ Caissa-Chess/
 │   ├── style_slider.py      # Style presets (Tal, Capablanca, etc)
 │   └── sacrifice_detector.py
 │
+├── benchmarks/              # Performance & quality analysis
+│   ├── provider_benchmark.py    # Multi-provider benchmarking
+│   ├── rich_console.py          # Color output & charts
+│   ├── quality_analyzer.py      # Game quality scoring
+│   ├── benchmark_history.py     # Trend analysis & persistence
+│   └── report_generator.py      # HTML/Markdown reports
+│
 ├── export/                  # Output formatting
 │   ├── pgn_builder.py       # PGN formatting
 │   ├── gif_generator.py     # Board visualization
@@ -67,7 +75,7 @@ Caissa-Chess/
 │   ├── openings.json        # ECO codes
 │   └── master_styles/       # Few-shot examples
 │
-├── tests/                   # Test suite
+├── tests/                   # Test suite (264 tests)
 └── README.md
 ```
 
@@ -130,6 +138,94 @@ See `docs/beauty_metric.md` for the full mathematical framework.
 | **Coffee House** | Very Low | Very High | Gambits and tricks |
 | **Neural** | Max | Zero | AlphaZero-style sacrifices |
 
+### 🎭 Historical Player Personalities (Phase 3.1)
+
+Generate games in the style of legendary chess masters:
+
+| Player | Era | Style | Aggression |
+|--------|-----|-------|------------|
+| **Morphy** | Romantic | Classical development, rapid attacks | 7/10 |
+| **Tal** | Soviet | Wild sacrifices, magical combinations | 9/10 |
+| **Capablanca** | Classical | Crystal-clear logic, endgame perfection | 4/10 |
+| **Fischer** | Computer | Perfect calculation, crushing technique | 7/10 |
+| **Kasparov** | Computer | Relentless attacking power | 8/10 |
+| **Carlsen** | Neural | Universal style, grinding technique | 5/10 |
+| **AlphaZero** | Neural | Alien logic, long-term sacrifices | 6/10 |
+
+## 🚀 Phase 3.1 Features
+
+### Batch Generation
+```python
+from core.generator import CaissaGenerator, RetryConfig, RetryStrategy
+
+generator = CaissaGenerator(provider)
+generator.set_retry_config(RetryConfig(
+    strategy=RetryStrategy.EXPONENTIAL,
+    max_retries=5,
+))
+
+# Generate multiple games
+batch_result = generator.generate_batch(contexts)
+print(f"Success rate: {batch_result.success_rate:.1%}")
+```
+
+### Multi-Format Export
+```python
+from export.pgn_builder import PGNBuilder, ExportFormat, NAG
+
+builder = PGNBuilder(white="Tal", black="Petrosian")
+builder.add_move_advanced("e4", nags=[NAG.GOOD_MOVE], comment="The king's pawn")
+builder.add_move_advanced("c5")  # Sicilian!
+
+# Export in multiple formats
+print(builder.export(ExportFormat.PGN))
+print(builder.export(ExportFormat.MARKDOWN))
+print(builder.export(ExportFormat.HTML))
+print(builder.export(ExportFormat.JSON))
+```
+
+### Narrative Arcs
+Generate games with story structure:
+- **Blitzkrieg** - Fast, overwhelming attack
+- **The Comeback** - Near-loss turned into victory
+- **The Slow Squeeze** - Gradual positional domination
+- **The Brilliancy** - Single stunning move turns game
+
+## 📊 Phase 3.2+ Benchmarking Features
+
+### Provider Benchmarking
+```bash
+# Rich console output with colors and charts
+python -m benchmarks.provider_benchmark --all --rich
+
+# Generate HTML report
+python -m benchmarks.provider_benchmark --all --report benchmark.html
+
+# Save to history database for trend analysis
+python -m benchmarks.provider_benchmark --all --save-history
+```
+
+### Quality Analysis
+```python
+from benchmarks.quality_analyzer import QualityAnalyzer
+
+analyzer = QualityAnalyzer()
+report = analyzer.analyze(pgn_string)
+
+print(f"Grade: {report.grade}")  # A+, A, B+, etc.
+print(f"Score: {report.overall_score}/100")
+print(f"Opening: {report.detected_opening}")
+```
+
+### Benchmark History & Trends
+```bash
+# Analyze performance trends over time
+python -m benchmarks.benchmark_history --provider openai --trends
+
+# Detect performance regressions
+python -m benchmarks.benchmark_history --regressions
+```
+
 ## 📋 Development Roadmap
 
 See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
@@ -137,9 +233,35 @@ See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
 **Current Status**: 
 - ✅ **v0.1**: Core generation pipeline (legality validation)
 - ✅ **v0.2**: Multi-provider LLM support (6 providers, 49 tests passing)
-- 🚀 **v0.2.1**: API testing & validation (next)
-- 📋 **v0.3**: Stockfish integration (planned)
-- 🎯 **v1.0**: Production-ready web interface
+- ✅ **v0.3**: Stockfish integration complete + Phase 3.1 enhancements
+  - 🎯 Batch generation with progress tracking
+  - 🎭 15 historical player personalities
+  - 📝 NAG annotations & multi-format export (PGN/HTML/MD/JSON)
+  - 🔄 Advanced retry strategies with exponential backoff
+  - 📊 Generation statistics and caching
+- ✅ **v0.3.1**: Quality & Testing (Phase 3.2)
+  - 📊 Provider metrics tracking (tokens, cost, latency)
+  - 🧪 Live API testing for all providers
+  - 🔬 End-to-end generation tests
+- ✅ **v0.3.2**: Enhanced Benchmarking (Phase 3.2+)
+  - 🎨 Rich console output with colors and charts
+  - 📈 Benchmark history and trend analysis
+  - 📋 HTML/Markdown report generation
+  - 🔍 Quality analysis for generated games
+  - ⚠️ Regression detection and alerts
+- 📋 **v0.4.0**: Quality & Analysis (Planned)
+  - Auto-annotation system with GM-level commentary
+  - Turing test mode for game evaluation
+  - Game database with search and analytics
+- 📋 **v0.5.0**: Web Interface & API (Planned)
+  - FastAPI backend with PostgreSQL + Redis
+  - Next.js 14 frontend with TypeScript
+  - Real-time WebSocket generation progress
+  - Interactive chessboard with game replay
+  - JWT auth with OAuth2 (GitHub, Google)
+  - Docker + Kubernetes deployment ready
+  - CI/CD with GitHub Actions
+- 🎯 **v1.0**: Production-ready release
 
 ## 🔬 Research Applications
 
@@ -156,6 +278,7 @@ MIT
 
 ---
 
-**Status**: `🔧 In Active Development`  
-**Version**: v0.2.0 (Multi-Provider LLM Integration)  
-**Last Updated**: February 3, 2026
+**Status**: `✅ Stable Release`  
+**Version**: v0.3.2 (Phase 3.2+ Enhanced Benchmarking Complete)  
+**Last Updated**: February 2026  
+**Tests**: 264 passing ✅
