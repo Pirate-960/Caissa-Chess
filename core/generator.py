@@ -523,10 +523,27 @@ class CaissaGenerator:
                     self._update_progress(GenerationStage.FINALIZATION)
                     elapsed = time.time() - start_time
                     logger.info(f"Game successfully generated in {elapsed:.1f}s")
-                    
+
+                    # Extract moves from PGN for downstream formatting
+                    extracted_moves = self.validator.extract_moves_from_pgn(pgn_text)
+                    if not extracted_moves:
+                        last_error = (
+                            "ERROR: PGN contains no moves. Please provide full movetext "
+                            "with legal SAN moves."
+                        )
+                        retry_count += 1
+                        self._current_progress.attempts = retry_count
+                        self._current_progress.errors.append(last_error)
+                        logger.warning(
+                            f"No moves found in PGN. Retrying (Attempt {retry_count}/{self.max_retries})..."
+                        )
+                        continue
+
+                    self.game_moves = extracted_moves
+
                     # Record statistics
                     self._record_stats(True, self.game_moves, retry_count, elapsed, context)
-                    
+
                     return True, pgn_text, self.game_moves
                 
                 else:

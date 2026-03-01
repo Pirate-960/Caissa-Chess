@@ -363,6 +363,24 @@ class LegalityValidator:
 
         return True, errors
 
+    def extract_moves_from_pgn(self, pgn_text: str) -> List[str]:
+        """
+        Extract SAN moves from a full PGN string (headers + movetext).
+        Returns an empty list if no moves are found.
+        """
+        if not pgn_text:
+            return []
+
+        pgn_content = pgn_text.split("\n\n", 1)
+        movetext = pgn_content[1].strip() if len(pgn_content) > 1 else pgn_text.strip()
+
+        # Remove headers if still present
+        lines = movetext.split("\n")
+        movetext_lines = [line for line in lines if not line.strip().startswith("[")]
+        movetext = " ".join(movetext_lines).strip()
+
+        return self._extract_moves_from_pgn(movetext)
+
     def _extract_moves_from_pgn(self, movetext: str) -> List[str]:
         """
         Extract moves from PGN movetext (NOT full PGN, just the moves section).

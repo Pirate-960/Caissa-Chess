@@ -35,6 +35,23 @@ from tenacity import (
 logger = logging.getLogger(__name__)
 
 
+# Create a dedicated logger for LLM prompts and responses
+llm_logger = logging.getLogger("llm_prompts")
+llm_logger.setLevel(logging.INFO)
+llm_logger.propagate = False  # Prevent passing logs to the root logger
+
+# Create a file handler to write to llm_logs.log
+# Ensure we're in the project root to save the log file there
+log_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'llm_logs.log')
+
+# Avoid adding handlers multiple times if module is reloaded
+if not llm_logger.handlers:
+    file_handler = logging.FileHandler(log_file_path, mode='a', encoding='utf-8')
+    formatter = logging.Formatter('%(asctime)s\n%(message)s\n')
+    file_handler.setFormatter(formatter)
+    llm_logger.addHandler(file_handler)
+
+
 # =============================================================================
 # PHASE 3.2: METRICS AND TRACKING
 # =============================================================================
@@ -195,10 +212,31 @@ MODEL_PRICING: Dict[str, Tuple[float, float]] = {
     "claude-3-sonnet": (3.0, 15.0),
     "claude-3-haiku": (0.25, 1.25),
     "claude-3-5-sonnet": (3.0, 15.0),
-    # Google
-    "gemini-pro": (0.50, 1.50),
-    "gemini-1.5-pro": (3.50, 10.50),
-    "gemini-1.5-flash": (0.075, 0.30),
+    # ===== Google Gemini 3.0 (Latest Flagship - Nov/Dec 2025) =====
+    "gemini-3-pro": (2.00, 12.00),              # $2 (≤200k) / $4 (>200k) input, $12/$18 output
+    "gemini-3-pro-200k": (4.00, 18.00),         # Pricing for >200k context
+    "gemini-3-flash": (0.50, 3.00),             # Fast & capable flagship
+    "gemini-3-deep-think": (2.00, 12.00),       # Deep reasoning (Pro tier pricing)
+    "nano-banana-pro": (2.00, 120.00),          # Image-focused Gemini 3 variant
+    # ===== Google Gemini 2.5 (Production Standard - June/July 2025) =====
+    "gemini-2.5-pro": (1.25, 10.00),            # $1.25 (≤200k) / $2.50 (>200k) input
+    "gemini-2.5-pro-200k": (2.50, 15.00),       # Pricing for >200k context
+    "gemini-2.5-flash": (0.30, 2.50),           # Native audio/video output
+    "gemini-2.5-flash-lite": (0.10, 0.40),      # Best price-to-performance
+    "nano-banana": (0.30, 30.00),               # Gemini 2.5 image variant
+    # ===== Google Gemini 2.0 (Legacy Support - Dec 2024/Feb 2025) =====
+    "gemini-2.0-pro": (1.25, 10.00),            # Legacy production
+    "gemini-2.0-flash": (0.15, 0.60),           # Standard default (legacy)
+    "gemini-2.0-flash-lite": (0.075, 0.30),     # High-volume automation
+    # ===== Google Gemini 1.5 (Context Revolution - Feb/May 2024) =====
+    "gemini-1.5-pro": (1.25, 5.00),             # Deprecated, limited access
+    "gemini-1.5-pro-latest": (1.25, 5.00),
+    "gemini-1.5-flash": (0.075, 0.30),          # Replaced by 2.x/3.x Flash
+    "gemini-1.5-flash-latest": (0.075, 0.30),
+    "gemini-1.5-flash-8b": (0.0375, 0.15),      # Smallest API model
+    # ===== Google Gemini 1.0 (Discontinued - Dec 2023) =====
+    "gemini-pro": (0.50, 1.50),                 # Discontinued
+    "gemini-1.0-pro": (0.50, 1.50),             # Discontinued
     # Local
     "ollama": (0.0, 0.0),
     "llama2": (0.0, 0.0),
@@ -425,18 +463,23 @@ class OpenAIProvider(LLMProvider):
         logger.debug(f"Generating with temperature={temperature}")
         
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=temperature,
-                max_tokens=self.max_tokens
-            )
             
             content = response.choices[0].message.content
             logger.debug(f"Generated {len(content)} characters")
+
+            log_message = (
+                f"=============================================\n"
+                f"LLM Provider: {self.__class__.__name__}\n"
+                f"Model: {self.model}\n"
+                f"---------- SYSTEM PROMPT ----------\n"
+                f"{system_prompt}\n"
+                f"---------- USER PROMPT ----------\n"
+                f"{user_prompt}\n"
+                f"---------- RESPONSE ----------\n"
+                f"{content}\n"
+                f"============================================="
+            )
+            llm_logger.info(log_message)
             
             return content
         
@@ -596,6 +639,20 @@ class AnthropicProvider(LLMProvider):
             
             content = response.content[0].text
             logger.debug(f"Generated {len(content)} characters")
+
+            log_message = (
+                f"=============================================\n"
+                f"LLM Provider: {self.__class__.__name__}\n"
+                f"Model: {self.model}\n"
+                f"---------- SYSTEM PROMPT ----------\n"
+                f"{system_prompt}\n"
+                f"---------- USER PROMPT ----------\n"
+                f"{user_prompt}\n"
+                f"---------- RESPONSE ----------\n"
+                f"{content}\n"
+                f"============================================="
+            )
+            llm_logger.info(log_message)
             
             return content
         
@@ -695,6 +752,20 @@ class AzureOpenAIProvider(LLMProvider):
             
             content = response.choices[0].message.content
             logger.debug(f"Generated {len(content)} characters")
+
+            log_message = (
+                f"=============================================\n"
+                f"LLM Provider: {self.__class__.__name__}\n"
+                f"Model: {self.deployment_name}\n"
+                f"---------- SYSTEM PROMPT ----------\n"
+                f"{system_prompt}\n"
+                f"---------- USER PROMPT ----------\n"
+                f"{user_prompt}\n"
+                f"---------- RESPONSE ----------\n"
+                f"{content}\n"
+                f"============================================="
+            )
+            llm_logger.info(log_message)
             
             return content
         
@@ -714,22 +785,80 @@ class GoogleGeminiProvider(LLMProvider):
     Features:
     - Exponential backoff for rate limits
     - Automatic retry on network errors
-    - Configurable model selection (Gemini Pro, etc.)
+    - Configurable model selection
+    - Support for Gemini 3.0, 2.5, 2.0, 1.5, and 1.0 series
+    
+    Supported Models (Feb 2026):
+    
+    GEMINI 3.0 (Flagship - Nov/Dec 2025):
+    - gemini-3-flash (RECOMMENDED) - Best value, 1M context
+    - gemini-3-pro - Premium quality, 1-2M context
+    - gemini-3-deep-think - Advanced reasoning capabilities
+    - nano-banana-pro - Image-focused variant (64k context)
+    
+    GEMINI 2.5 (Production Standard - June/July 2025):
+    - gemini-2.5-flash - Native audio/video output
+    - gemini-2.5-flash-lite - Cheapest price-to-perf ratio
+    - gemini-2.5-pro - High multimodal reasoning
+    - nano-banana - Gemini 2.5 image variant
+    
+    GEMINI 2.0 (Legacy - Dec 2024/Feb 2025):
+    - gemini-2.0-flash - First speed breakthrough
+    - gemini-2.0-flash-lite - High-volume automation
+    - gemini-2.0-pro - Legacy production
+    
+    GEMINI 1.5/1.0 (Deprecated):
+    - gemini-1.5-pro/flash - Limited access
+    - gemini-1.0-pro - Discontinued
     """
+    
+    SUPPORTED_MODELS = [
+        # Gemini 3.0 (Latest Flagship)
+        "gemini-3-flash",
+        "gemini-3-pro",
+        "gemini-3-pro-200k",
+        "gemini-3-deep-think",
+        "nano-banana-pro",
+        # Gemini 2.5 (Production Standard)
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-pro",
+        "gemini-2.5-pro-200k",
+        "nano-banana",
+        # Gemini 2.0 (Legacy Support)
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-2.0-pro",
+        # Gemini 1.5 (Deprecated)
+        "gemini-1.5-pro",
+        "gemini-1.5-pro-latest",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-8b",
+        # Gemini 1.0 (Discontinued)
+        "gemini-pro",
+        "gemini-1.0-pro",
+    ]
 
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-pro",
-        max_tokens: int = 4096
+        model: str = "gemini-3-flash",
+        max_tokens: int = 8192
     ):
         """
         Initialize Google Gemini provider.
         
         Args:
             api_key: Google API key (if None, reads from GOOGLE_API_KEY)
-            model: Model to use (default: gemini-pro)
-            max_tokens: Maximum tokens to generate
+            model: Model to use (default: gemini-3-flash)
+            max_tokens: Maximum tokens to generate (default: 8192)
+        
+        Recommended models by use case:
+            - gemini-3-flash: Best value, fast & capable (RECOMMENDED)
+            - gemini-3-pro: Premium quality, complex reasoning
+            - gemini-3-deep-think: Advanced reasoning tasks
+            - gemini-2.5-flash-lite: Budget-friendly, high volume
         """
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
@@ -791,6 +920,18 @@ class GoogleGeminiProvider(LLMProvider):
             
             content = response.text
             logger.debug(f"Generated {len(content)} characters")
+
+            log_message = (
+                f"=============================================\n"
+                f"LLM Provider: {self.__class__.__name__}\n"
+                f"Model: {self.model}\n"
+                f"---------- PROMPT ----------\n"
+                f"{full_prompt}\n"
+                f"---------- RESPONSE ----------\n"
+                f"{content}\n"
+                f"============================================="
+            )
+            llm_logger.info(log_message)
             
             return content
         
@@ -889,6 +1030,20 @@ class OllamaProvider(LLMProvider):
             content = result.get("response", "")
             
             logger.debug(f"Generated {len(content)} characters")
+
+            log_message = (
+                f"=============================================\n"
+                f"LLM Provider: {self.__class__.__name__}\n"
+#                 f"Model: {self.model}\n"
+                f"---------- SYSTEM PROMPT ----------\n"
+                f"{system_prompt}\n"
+                f"---------- USER PROMPT ----------\n"
+                f"{user_prompt}\n"
+                f"---------- RESPONSE ----------\n"
+                f"{content}\n"
+                f"============================================="
+            )
+            llm_logger.info(log_message)
             
             return content
         

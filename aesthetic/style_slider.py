@@ -48,6 +48,8 @@ class StyleConfiguration:
     contempt: int                     # 0-200, higher = engine fights harder
     style_name: str
     description: str
+    aggression: int = 7              # 1-10, higher = more attacking
+    chaos: int = 5                   # 1-10, higher = more surprising
 
 
 # =============================================================================
@@ -226,6 +228,8 @@ class StyleSlider:
             contempt=50,
             style_name="The Tal",
             description="Intuitive attacks, even if unsound. Complications over precision.",
+            aggression=10,
+            chaos=9,
         ),
         StylePreset.CAPABLANCA: StyleConfiguration(
             stockfish_depth=20,
@@ -234,6 +238,8 @@ class StyleSlider:
             contempt=0,
             style_name="The Capablanca",
             description="Positional perfection. Every move justified. Pure strength.",
+            aggression=3,
+            chaos=2,
         ),
         StylePreset.MORPHY: StyleConfiguration(
             stockfish_depth=15,
@@ -242,6 +248,8 @@ class StyleSlider:
             contempt=30,
             style_name="The Morphy",
             description="Classical attacking chess. Sound sacrifices for the initiative.",
+            aggression=8,
+            chaos=6,
         ),
         StylePreset.COFFEE_HOUSE: StyleConfiguration(
             stockfish_depth=5,
@@ -250,6 +258,8 @@ class StyleSlider:
             contempt=100,
             style_name="The Coffee House",
             description="Gambits, tricks, hope-chess. Embrace the chaos.",
+            aggression=9,
+            chaos=10,
         ),
         StylePreset.NEURAL: StyleConfiguration(
             stockfish_depth=25,
@@ -258,6 +268,8 @@ class StyleSlider:
             contempt=150,
             style_name="The Neural",
             description="AlphaZero-like sacrifices. Inexplicable until you see it.",
+            aggression=6,
+            chaos=7,
         ),
         StylePreset.KARPOV: StyleConfiguration(
             stockfish_depth=18,
@@ -266,6 +278,8 @@ class StyleSlider:
             contempt=10,
             style_name="The Karpov",
             description="Silent positional squeeze. Suffocate your opponent.",
+            aggression=3,
+            chaos=3,
         ),
     }
 
@@ -624,6 +638,8 @@ class StyleSlider:
             contempt=base_config.contempt,
             style_name=base_config.style_name,
             description=base_config.description,
+            aggression=base_config.aggression,
+            chaos=base_config.chaos,
         )
 
     # =========================================================================
