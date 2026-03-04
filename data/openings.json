@@ -1,26 +1,1487 @@
 {
-  "sicilian_najdorf": {
-    "eco": "B90",
-    "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6"],
-    "era": "modern",
-    "notes": "Flexible defense, hypermodern ideas"
-  },
-  "ruy_lopez": {
-    "eco": "C80",
-    "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5"],
-    "era": "classical",
-    "notes": "The Spanish, most popular classical opening"
-  },
-  "french_defense": {
-    "eco": "C00",
-    "moves": ["e4", "e6"],
-    "era": "semi-closed",
-    "notes": "Solid, positional defense"
-  },
-  "king_indian_attack": {
-    "eco": "A07",
-    "moves": ["Nf3", "d5", "g3", "c5", "Bg2", "cxd4", "Nxd4"],
-    "era": "hypermodern",
-    "notes": "Fianchetto setup, control from distance"
-  }
+    "grob_attack": {
+        "eco": "A00",
+        "moves": ["g4"],
+        "notes": "Aggressive flank opening; surprises opponents but weakens kingside"
+    },
+    "polish_opening": {
+        "eco": "A00",
+        "moves": ["b4"],
+        "notes": "Sokolsky Opening; aims for queenside fianchetto and flank pressure"
+    },
+    "hungarian_opening": {
+        "eco": "A00",
+        "moves": ["g3"],
+        "notes": "Flexible king fianchetto system; transposes to many setups"
+    },
+    "nimzowitsch_larsen_attack": {
+        "eco": "A01",
+        "moves": ["b3"],
+        "notes": "Fianchetto queen bishop; flexible hypermodern approach"
+    },
+    "birds_opening": {
+        "eco": "A02",
+        "moves": ["f4"],
+        "notes": "Dutch Attack reversed; controls e5 square early"
+    },
+    "birds_opening_from_gambit": {
+        "eco": "A02",
+        "moves": ["f4", "e5"],
+        "notes": "From's Gambit against Bird; sharp counterattacking try for Black"
+    },
+    "birds_opening_dutch_variation": {
+        "eco": "A03",
+        "moves": ["f4", "d5"],
+        "notes": "Reversed Dutch structure; solid and positional"
+    },
+    "reti_opening": {
+        "eco": "A04",
+        "moves": ["Nf3"],
+        "notes": "Flexible hypermodern opening; delays central pawn commitment"
+    },
+    "reti_opening_kings_indian_attack_setup": {
+        "eco": "A05",
+        "moves": ["Nf3", "d5", "g3"],
+        "notes": "King's Indian Attack setup via Réti; flexible middlegame plans"
+    },
+    "reti_opening_advance_variation": {
+        "eco": "A09",
+        "moves": ["Nf3", "d5", "c4", "dxc4"],
+        "notes": "Réti Accepted; White recaptures or plays gambiting continuation"
+    },
+    "english_opening": {
+        "eco": "A10",
+        "moves": ["c4"],
+        "notes": "Flexible flank opening; often transposes to Queen's Gambit or Indian setups"
+    },
+    "english_anglo_indian": {
+        "eco": "A15",
+        "moves": ["c4", "Nf6"],
+        "notes": "Anglo-Indian Defense; can lead to many Indian-type structures"
+    },
+    "english_mikenas_carls": {
+        "eco": "A18",
+        "moves": ["c4", "Nf6", "Nc3", "e6", "e4"],
+        "notes": "Aggressive setup in the English; seizes center early"
+    },
+    "english_reversed_sicilian": {
+        "eco": "A20",
+        "moves": ["c4", "e5"],
+        "notes": "Reversed Sicilian structure; White plays Sicilian with extra tempo"
+    },
+    "english_bremen_hort": {
+        "eco": "A22",
+        "moves": ["c4", "e5", "Nc3", "Nf6"],
+        "notes": "Flexible English line; can transpose to Four Knights English"
+    },
+    "english_closed": {
+        "eco": "A25",
+        "moves": ["c4", "e5", "Nc3", "Nc6", "g3"],
+        "notes": "Closed English; fianchetto setup, slow strategic maneuvering"
+    },
+    "english_four_knights": {
+        "eco": "A28",
+        "moves": ["c4", "e5", "Nc3", "Nf6", "Nf3", "Nc6"],
+        "notes": "Symmetrical knight development; rich positional play"
+    },
+    "english_four_knights_kingside_fianchetto": {
+        "eco": "A29",
+        "moves": ["c4", "e5", "Nc3", "Nf6", "Nf3", "Nc6", "g3"],
+        "notes": "Fianchetto setup in Four Knights English; aims for long-term pressure"
+    },
+    "english_symmetrical": {
+        "eco": "A30",
+        "moves": ["c4", "c5"],
+        "notes": "Symmetrical English; leads to positional hedgehog or Maroczy structures"
+    },
+    "english_symmetrical_four_knights": {
+        "eco": "A33",
+        "moves": ["c4", "c5", "Nc3", "Nc6", "Nf3", "Nf6", "d4", "cxd4", "Nxd4"],
+        "notes": "Symmetrical Four Knights; Open lines with balanced pawn structure"
+    },
+    "english_symmetrical_ultra_symmetrical": {
+        "eco": "A36",
+        "moves": ["c4", "c5", "Nc3", "Nc6", "g3"],
+        "notes": "Ultra-symmetrical English; both sides fianchetto, slow strategic battle"
+    },
+    "english_symmetrical_hedgehog": {
+        "eco": "A30",
+        "moves": ["c4", "c5", "Nf3", "Nf6", "g3", "b6", "Bg2", "Bb7"],
+        "notes": "Hedgehog formation; Black maintains compact flexible structure"
+    },
+    "queens_pawn_game": {
+        "eco": "A40",
+        "moves": ["d4"],
+        "notes": "Queen's Pawn Game; foundation for many closed and semi-closed openings"
+    },
+    "horwitz_defense": {
+        "eco": "A40",
+        "moves": ["d4", "e6"],
+        "notes": "Can transpose to French, Dutch, or Queen's Indian depending on continuation"
+    },
+    "modern_defense_vs_d4": {
+        "eco": "A40",
+        "moves": ["d4", "g6"],
+        "notes": "Hypermodern approach against d4; delays central occupation"
+    },
+    "englund_gambit": {
+        "eco": "A40",
+        "moves": ["d4", "e5"],
+        "notes": "Dubious gambit; Black sacrifices pawn for quick development and tricks"
+    },
+    "trompowsky_attack": {
+        "eco": "A45",
+        "moves": ["d4", "Nf6", "Bg5"],
+        "notes": "Aggressive anti-Indian; pins knight and disrupts Black's setup"
+    },
+    "torre_attack_vs_nf6": {
+        "eco": "A46",
+        "moves": ["d4", "Nf6", "Nf3", "e6", "Bg5"],
+        "notes": "Torre Attack; solid system with Bg5 pin and central buildup"
+    },
+    "london_system_vs_nf6": {
+        "eco": "A46",
+        "moves": ["d4", "Nf6", "Nf3", "e6", "Bf4"],
+        "notes": "London System; solid, reliable setup with early Bf4"
+    },
+    "colle_zukertort": {
+        "eco": "A46",
+        "moves": ["d4", "Nf6", "Nf3", "e6", "e3", "d5", "Bd3", "c5", "b3"],
+        "notes": "Colle-Zukertort; queenside fianchetto hybrid of Colle and Zukertort plans"
+    },
+    "budapest_gambit": {
+        "eco": "A51",
+        "moves": ["d4", "Nf6", "c4", "e5"],
+        "notes": "Sharp gambit; Black challenges center immediately with ...e5"
+    },
+    "budapest_gambit_adler_variation": {
+        "eco": "A52",
+        "moves": ["d4", "Nf6", "c4", "e5", "dxe5", "Ng4"],
+        "notes": "Adler Variation; knight aims for e5 outpost, tactical complications"
+    },
+    "old_indian_defense": {
+        "eco": "A53",
+        "moves": ["d4", "Nf6", "c4", "d6"],
+        "notes": "Solid but passive; Black builds compact position before counterattacking"
+    },
+    "old_indian_ukrainian": {
+        "eco": "A54",
+        "moves": ["d4", "Nf6", "c4", "d6", "Nc3", "e5"],
+        "notes": "Ukrainian Variation; Black fights for e5 control early"
+    },
+    "benoni_defense": {
+        "eco": "A56",
+        "moves": ["d4", "Nf6", "c4", "c5", "d5"],
+        "notes": "Asymmetric pawn structure; Black seeks queenside counterplay"
+    },
+    "czech_benoni": {
+        "eco": "A56",
+        "moves": ["d4", "Nf6", "c4", "c5", "d5", "e5"],
+        "notes": "Closed Czech Benoni; blocked center with long-term pawn breaks"
+    },
+    "benko_gambit": {
+        "eco": "A57",
+        "moves": ["d4", "Nf6", "c4", "c5", "d5", "b5"],
+        "notes": "Pawn sacrifice for lasting queenside pressure along a and b files"
+    },
+    "benko_gambit_accepted": {
+        "eco": "A58",
+        "moves": ["d4", "Nf6", "c4", "c5", "d5", "b5", "cxb5", "a6"],
+        "notes": "Accepted Benko; Black gets excellent compensation on open queenside files"
+    },
+    "benko_gambit_fully_accepted": {
+        "eco": "A59",
+        "moves": ["d4", "Nf6", "c4", "c5", "d5", "b5", "cxb5", "a6", "bxa6"],
+        "notes": "Fully accepted; Black's queenside initiative is significant and lasting"
+    },
+    "modern_benoni": {
+        "eco": "A60",
+        "moves": ["d4", "Nf6", "c4", "c5", "d5", "e6", "Nc3", "exd5", "cxd5", "d6"],
+        "notes": "Dynamic asymmetric structure; Black counters in center and kingside"
+    },
+    "modern_benoni_classical": {
+        "eco": "A70",
+        "moves": ["d4", "Nf6", "c4", "c5", "d5", "e6", "Nc3", "exd5", "cxd5", "d6", "e4", "g6", "Nf3", "Bg7"],
+        "notes": "Classical Modern Benoni; main line with kingside fianchetto"
+    },
+    "modern_benoni_taimanov_variation": {
+        "eco": "A75",
+        "moves": ["d4", "Nf6", "c4", "c5", "d5", "e6", "Nc3", "exd5", "cxd5", "d6", "e4", "g6", "Nf3", "Bg7", "Bg5"],
+        "notes": "Taimanov Attack; Bg5 puts pressure on Black's kingside plans"
+    },
+    "dutch_defense": {
+        "eco": "A80",
+        "moves": ["d4", "f5"],
+        "notes": "Aggressive Black defense; controls e4 but weakens king"
+    },
+    "dutch_leningrad": {
+        "eco": "A87",
+        "moves": ["d4", "f5", "c4", "Nf6", "g3", "g6", "Bg2", "Bg7"],
+        "notes": "Leningrad Dutch; kingside fianchetto with strong dark-square control"
+    },
+    "dutch_stonewall": {
+        "eco": "A90",
+        "moves": ["d4", "f5", "c4", "Nf6", "g3", "e6", "Bg2", "d5"],
+        "notes": "Stonewall formation; rock-solid center but weak e5 and dark squares"
+    },
+    "dutch_classical": {
+        "eco": "A92",
+        "moves": ["d4", "f5", "c4", "Nf6", "g3", "e6", "Bg2", "Be7"],
+        "notes": "Classical Dutch; sound development with central flexibility"
+    },
+    "dutch_ilyin_zhenevsky": {
+        "eco": "A97",
+        "moves": ["d4", "f5", "c4", "Nf6", "g3", "e6", "Bg2", "Be7", "Nf3", "O-O", "O-O", "d6", "Nc3", "Qe8"],
+        "notes": "Ilyin-Zhenevsky system; queen repositions to support kingside attack"
+    },
+    "nimzowitsch_defense": {
+        "eco": "B00",
+        "moves": ["e4", "Nc6"],
+        "notes": "Unusual defense; knight develops early aiming for hypermodern control"
+    },
+    "owens_defense": {
+        "eco": "B00",
+        "moves": ["e4", "b6"],
+        "notes": "Fianchetto queen bishop early; risky but flexible dark-square strategy"
+    },
+    "scandinavian_defense": {
+        "eco": "B01",
+        "moves": ["e4", "d5"],
+        "notes": "Center Counter; challenges e4 immediately, leads to open play"
+    },
+    "scandinavian_main_line": {
+        "eco": "B01",
+        "moves": ["e4", "d5", "exd5", "Qxd5"],
+        "notes": "Queen recapture; queen develops early but must retreat"
+    },
+    "scandinavian_modern": {
+        "eco": "B01",
+        "moves": ["e4", "d5", "exd5", "Nf6"],
+        "notes": "Modern Scandinavian; recaptures with knight, avoids early queen exposure"
+    },
+    "scandinavian_icelandic_gambit": {
+        "eco": "B01",
+        "moves": ["e4", "d5", "exd5", "Nf6", "c4", "e6"],
+        "notes": "Icelandic Gambit; pawn sacrifice for rapid development and initiative"
+    },
+    "alekhines_defense": {
+        "eco": "B02",
+        "moves": ["e4", "Nf6"],
+        "notes": "Provokes e-pawn advance; hypermodern strategy to attack overextended center"
+    },
+    "alekhines_defense_exchange": {
+        "eco": "B03",
+        "moves": ["e4", "Nf6", "e5", "Nd5", "d4", "d6", "c4", "Nb6", "exd6"],
+        "notes": "Exchange Variation; simplifies the center, quiet positional play"
+    },
+    "alekhines_defense_four_pawns_attack": {
+        "eco": "B03",
+        "moves": ["e4", "Nf6", "e5", "Nd5", "d4", "d6", "c4", "Nb6", "f4"],
+        "notes": "Aggressive four pawns center; powerful but can overextend"
+    },
+    "alekhines_defense_modern": {
+        "eco": "B04",
+        "moves": ["e4", "Nf6", "e5", "Nd5", "d4", "d6", "Nf3"],
+        "notes": "Modern Variation; solid development without overcommitting pawns"
+    },
+    "alekhines_defense_modern_main_line": {
+        "eco": "B05",
+        "moves": ["e4", "Nf6", "e5", "Nd5", "d4", "d6", "Nf3", "Bg4"],
+        "notes": "Main line with Bg4 pin; active piece play for Black"
+    },
+    "modern_defense": {
+        "eco": "B06",
+        "moves": ["e4", "g6"],
+        "notes": "Robatsch/Modern; hypermodern fianchetto, flexible transpositions"
+    },
+    "pirc_defense": {
+        "eco": "B07",
+        "moves": ["e4", "d6", "d4", "Nf6", "Nc3"],
+        "notes": "Hypermodern defense; allows White center then counterattacks"
+    },
+    "pirc_classical": {
+        "eco": "B08",
+        "moves": ["e4", "d6", "d4", "Nf6", "Nc3", "g6", "Nf3", "Bg7", "Be2"],
+        "notes": "Classical Pirc; solid White development, methodical approach"
+    },
+    "pirc_austrian_attack": {
+        "eco": "B09",
+        "moves": ["e4", "d6", "d4", "Nf6", "Nc3", "g6", "f4"],
+        "notes": "Aggressive f4 thrust; aims to build massive pawn center"
+    },
+    "caro_kann_defense": {
+        "eco": "B10",
+        "moves": ["e4", "c6"],
+        "notes": "Solid defense preparing ...d5; reliable and resilient structure"
+    },
+    "caro_kann_two_knights": {
+        "eco": "B11",
+        "moves": ["e4", "c6", "Nc3", "d5", "Nf3"],
+        "notes": "Two Knights system; flexible and avoids heavy theoretical lines"
+    },
+    "caro_kann_advance": {
+        "eco": "B12",
+        "moves": ["e4", "c6", "d4", "d5", "e5"],
+        "notes": "Advance Variation; space advantage for White, French-like structures"
+    },
+    "caro_kann_advance_short_system": {
+        "eco": "B12",
+        "moves": ["e4", "c6", "d4", "d5", "e5", "Bf5", "Nf3", "e6", "Be2"],
+        "notes": "Short system in Advance; calm positional treatment"
+    },
+    "caro_kann_exchange": {
+        "eco": "B13",
+        "moves": ["e4", "c6", "d4", "d5", "exd5", "cxd5"],
+        "notes": "Exchange Variation; symmetrical structure, often drawish"
+    },
+    "caro_kann_panov_botvinnik": {
+        "eco": "B14",
+        "moves": ["e4", "c6", "d4", "d5", "exd5", "cxd5", "c4"],
+        "notes": "Panov-Botvinnik Attack; IQP play, dynamic middlegame chances"
+    },
+    "caro_kann_main_line": {
+        "eco": "B15",
+        "moves": ["e4", "c6", "d4", "d5", "Nc3"],
+        "notes": "Main line Caro-Kann; most common continuation into classical lines"
+    },
+    "caro_kann_bronstein_larsen": {
+        "eco": "B16",
+        "moves": ["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Nf6", "Nxf6+", "gxf6"],
+        "notes": "Bronstein-Larsen; doubled f-pawns but bishop pair and open g-file"
+    },
+    "caro_kann_steinitz": {
+        "eco": "B17",
+        "moves": ["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Nd7"],
+        "notes": "Steinitz Variation; solid knight development, avoids knight exchange"
+    },
+    "caro_kann_classical": {
+        "eco": "B18",
+        "moves": ["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Bf5"],
+        "notes": "Classical Caro-Kann; bishop develops outside pawn chain, very solid"
+    },
+    "caro_kann_classical_main_line": {
+        "eco": "B19",
+        "moves": ["e4", "c6", "d4", "d5", "Nc3", "dxe4", "Nxe4", "Bf5", "Ng3", "Bg6", "h4", "h6", "Nf3", "Nd7"],
+        "notes": "Main line Classical; deeply analyzed, leads to complex middlegames"
+    },
+    "sicilian_defense": {
+        "eco": "B20",
+        "moves": ["e4", "c5"],
+        "notes": "Most popular response to 1.e4; asymmetric play with Black fighting for initiative"
+    },
+    "sicilian_wing_gambit": {
+        "eco": "B20",
+        "moves": ["e4", "c5", "b4"],
+        "notes": "Wing Gambit; pawn sacrifice for quick development and open lines"
+    },
+    "sicilian_smith_morra_gambit": {
+        "eco": "B21",
+        "moves": ["e4", "c5", "d4", "cxd4", "c3"],
+        "notes": "Smith-Morra Gambit; pawn sacrifice for rapid piece activity and open lines"
+    },
+    "sicilian_smith_morra_accepted": {
+        "eco": "B21",
+        "moves": ["e4", "c5", "d4", "cxd4", "c3", "dxc3", "Nxc3"],
+        "notes": "Accepted Morra; White gets excellent development for one pawn"
+    },
+    "sicilian_alapin": {
+        "eco": "B22",
+        "moves": ["e4", "c5", "c3"],
+        "notes": "Alapin Variation; prepares d4 while avoiding main-line theory"
+    },
+    "sicilian_closed": {
+        "eco": "B23",
+        "moves": ["e4", "c5", "Nc3"],
+        "notes": "Closed Sicilian; kingside fianchetto plans, avoids Open Sicilian complexity"
+    },
+    "sicilian_grand_prix_attack": {
+        "eco": "B23",
+        "moves": ["e4", "c5", "Nc3", "Nc6", "f4"],
+        "notes": "Grand Prix Attack; aggressive f4 setup against the Sicilian"
+    },
+    "sicilian_closed_fianchetto": {
+        "eco": "B24",
+        "moves": ["e4", "c5", "Nc3", "Nc6", "g3", "g6", "Bg2", "Bg7"],
+        "notes": "Closed Sicilian fianchetto; slow positional buildup"
+    },
+    "sicilian_hyperaccelerated_dragon": {
+        "eco": "B27",
+        "moves": ["e4", "c5", "Nf3", "g6"],
+        "notes": "Hyper-Accelerated Dragon; immediate fianchetto, flexible move order"
+    },
+    "sicilian_odynamics": {
+        "eco": "B27",
+        "moves": ["e4", "c5", "Nf3", "b6"],
+        "notes": "Sicilian with ...b6; unusual queenside fianchetto approach"
+    },
+    "sicilian_nimzowitsch_variation": {
+        "eco": "B29",
+        "moves": ["e4", "c5", "Nf3", "Nf6"],
+        "notes": "Nimzowitsch Variation; immediate attack on e4, provocative play"
+    },
+    "sicilian_rossolimo": {
+        "eco": "B31",
+        "moves": ["e4", "c5", "Nf3", "Nc6", "Bb5"],
+        "notes": "Rossolimo Variation; avoids Open Sicilian, positional approach"
+    },
+    "sicilian_kalashnikov": {
+        "eco": "B32",
+        "moves": ["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "e5", "Nb5", "d6"],
+        "notes": "Kalashnikov; aggressive ...e5, fights for central space"
+    },
+    "sicilian_sveshnikov": {
+        "eco": "B33",
+        "moves": ["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "e5"],
+        "notes": "Sveshnikov/Pelikan; aggressive center push, dynamic and deeply analyzed"
+    },
+    "sicilian_accelerated_dragon": {
+        "eco": "B34",
+        "moves": ["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "g6"],
+        "notes": "Accelerated Dragon; fianchetto before ...Nf6, avoids Yugoslav Attack"
+    },
+    "sicilian_accelerated_dragon_maroczy_bind": {
+        "eco": "B36",
+        "moves": ["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "g6", "c4"],
+        "notes": "Maroczy Bind; White clamps down on d5 with c4, space advantage"
+    },
+    "sicilian_kan": {
+        "eco": "B41",
+        "moves": ["e4", "c5", "Nf3", "e6", "d4", "cxd4", "Nxd4", "a6"],
+        "notes": "Kan/Paulsen Variation; flexible setup allowing many pawn structures"
+    },
+    "sicilian_taimanov": {
+        "eco": "B44",
+        "moves": ["e4", "c5", "Nf3", "e6", "d4", "cxd4", "Nxd4", "Nc6"],
+        "notes": "Taimanov Variation; flexible knight development, rich middlegame play"
+    },
+    "sicilian_taimanov_english_attack": {
+        "eco": "B48",
+        "moves": ["e4", "c5", "Nf3", "e6", "d4", "cxd4", "Nxd4", "Nc6", "Nc3", "Qc7", "Be3"],
+        "notes": "English Attack vs Taimanov; aggressive setup with Be3-f3-Qd2"
+    },
+    "sicilian_moscow": {
+        "eco": "B51",
+        "moves": ["e4", "c5", "Nf3", "d6", "Bb5+"],
+        "notes": "Moscow Variation; early bishop check disrupts Black's development"
+    },
+    "sicilian_open": {
+        "eco": "B54",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4"],
+        "notes": "Open Sicilian starting position; gateway to Dragon, Najdorf, Scheveningen"
+    },
+    "sicilian_classical": {
+        "eco": "B56",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3"],
+        "notes": "Open Sicilian main framework; branches into all major variations"
+    },
+    "sicilian_richter_rauzer": {
+        "eco": "B60",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "Nc6", "Bg5"],
+        "notes": "Richter-Rauzer Attack; Bg5 creates pin and tactical tension"
+    },
+    "sicilian_richter_rauzer_main_line": {
+        "eco": "B67",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "Nc6", "Bg5", "e6", "Qd2"],
+        "notes": "Richter-Rauzer main line; complex middlegame with opposite-side castling"
+    },
+    "sicilian_dragon": {
+        "eco": "B70",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "g6"],
+        "notes": "Dragon Variation; kingside fianchetto, aggressive and sharp play"
+    },
+    "sicilian_dragon_classical": {
+        "eco": "B72",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "g6", "Be3", "Bg7", "Be2"],
+        "notes": "Classical Dragon; solid White setup, positional treatment"
+    },
+    "sicilian_dragon_yugoslav_attack": {
+        "eco": "B76",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "g6", "Be3", "Bg7", "f3"],
+        "notes": "Yugoslav Attack; most critical test of the Dragon, opposite-side castling battle"
+    },
+    "sicilian_dragon_yugoslav_main_line": {
+        "eco": "B77",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "g6", "Be3", "Bg7", "f3", "O-O", "Qd2", "Nc6", "Bc4"],
+        "notes": "Yugoslav Attack main line; extremely sharp, mutual kingside attacks"
+    },
+    "sicilian_scheveningen": {
+        "eco": "B80",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "e6"],
+        "notes": "Scheveningen; small center with ...e6 and ...d6, flexible and solid"
+    },
+    "sicilian_scheveningen_english_attack": {
+        "eco": "B80",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "e6", "Be3", "a6", "f3"],
+        "notes": "English Attack vs Scheveningen; aggressive queenside castling and kingside pawn storm"
+    },
+    "sicilian_scheveningen_classical": {
+        "eco": "B84",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "e6", "Be2"],
+        "notes": "Classical Scheveningen; solid and positional approach by White"
+    },
+    "sicilian_scheveningen_keres_attack": {
+        "eco": "B81",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "e6", "g4"],
+        "notes": "Keres Attack; immediate kingside aggression, very sharp"
+    },
+    "sicilian_najdorf": {
+        "eco": "B90",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6"],
+        "notes": "Najdorf Variation; most popular and deeply analyzed Sicilian, flexible and combative"
+    },
+    "sicilian_najdorf_opocensky": {
+        "eco": "B92",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be2"],
+        "notes": "Opocensky Variation; quiet positional system against the Najdorf"
+    },
+    "sicilian_najdorf_adams_attack": {
+        "eco": "B90",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "h3"],
+        "notes": "Adams Attack; prevents ...Bg4, flexible development"
+    },
+    "sicilian_najdorf_english_attack": {
+        "eco": "B90",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be3"],
+        "notes": "English Attack vs Najdorf; Be3-f3-Qd2-g4 plan, very aggressive"
+    },
+    "sicilian_najdorf_bg5": {
+        "eco": "B94",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5"],
+        "notes": "6.Bg5 main line; classical approach testing the Najdorf"
+    },
+    "sicilian_najdorf_poisoned_pawn": {
+        "eco": "B97",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5", "e6", "f4", "Qb6"],
+        "notes": "Poisoned Pawn; Black grabs b2 pawn, extremely sharp and theoretical"
+    },
+    "sicilian_najdorf_main_line": {
+        "eco": "B99",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bg5", "e6", "f4", "Be7", "Qf3", "Qc7", "O-O-O"],
+        "notes": "Najdorf Main Line; deep theory with opposite-side castling, dynamic play"
+    },
+    "french_defense": {
+        "eco": "C00",
+        "moves": ["e4", "e6"],
+        "notes": "Solid defense; Black builds strong pawn chain but constrains light-squared bishop"
+    },
+    "french_exchange": {
+        "eco": "C01",
+        "moves": ["e4", "e6", "d4", "d5", "exd5", "exd5"],
+        "notes": "Exchange French; symmetric structure, often leads to quiet positions"
+    },
+    "french_advance": {
+        "eco": "C02",
+        "moves": ["e4", "e6", "d4", "d5", "e5"],
+        "notes": "Advance Variation; space advantage, play revolves around pawn chains"
+    },
+    "french_advance_main_line": {
+        "eco": "C02",
+        "moves": ["e4", "e6", "d4", "d5", "e5", "c5", "c3", "Nc6", "Nf3"],
+        "notes": "Advance main line; Black attacks d4 base of the chain"
+    },
+    "french_tarrasch": {
+        "eco": "C03",
+        "moves": ["e4", "e6", "d4", "d5", "Nd2"],
+        "notes": "Tarrasch Variation; avoids Winawer pin, solid White setup"
+    },
+    "french_tarrasch_closed": {
+        "eco": "C05",
+        "moves": ["e4", "e6", "d4", "d5", "Nd2", "Nf6", "e5", "Nfd7"],
+        "notes": "Closed Tarrasch; blocked center, maneuvering play"
+    },
+    "french_tarrasch_open": {
+        "eco": "C07",
+        "moves": ["e4", "e6", "d4", "d5", "Nd2", "c5"],
+        "notes": "Open Tarrasch; Black strikes at d4 immediately, open game"
+    },
+    "french_classical": {
+        "eco": "C11",
+        "moves": ["e4", "e6", "d4", "d5", "Nc3", "Nf6"],
+        "notes": "Classical French; natural development, leads to rich middlegames"
+    },
+    "french_mccutcheon": {
+        "eco": "C12",
+        "moves": ["e4", "e6", "d4", "d5", "Nc3", "Nf6", "Bg5", "Bb4"],
+        "notes": "McCutcheon Variation; counter-pin with ...Bb4, complex play"
+    },
+    "french_classical_burn": {
+        "eco": "C11",
+        "moves": ["e4", "e6", "d4", "d5", "Nc3", "Nf6", "Bg5", "dxe4"],
+        "notes": "Burn Variation; captures on e4, leading to open dynamic positions"
+    },
+    "french_classical_main": {
+        "eco": "C13",
+        "moves": ["e4", "e6", "d4", "d5", "Nc3", "Nf6", "Bg5", "Be7"],
+        "notes": "Classical main line; solid Be7, calmly completing development"
+    },
+    "french_winawer": {
+        "eco": "C15",
+        "moves": ["e4", "e6", "d4", "d5", "Nc3", "Bb4"],
+        "notes": "Winawer Variation; pins knight, creates structural tension and imbalance"
+    },
+    "french_winawer_advance": {
+        "eco": "C16",
+        "moves": ["e4", "e6", "d4", "d5", "Nc3", "Bb4", "e5"],
+        "notes": "Winawer Advance; gains space, sharp theoretical battles ahead"
+    },
+    "french_winawer_main_line": {
+        "eco": "C18",
+        "moves": ["e4", "e6", "d4", "d5", "Nc3", "Bb4", "e5", "c5", "a3", "Bxc3+", "bxc3"],
+        "notes": "Winawer main line; White gets bishop pair and center, Black has structure"
+    },
+    "french_winawer_poisoned_pawn": {
+        "eco": "C18",
+        "moves": ["e4", "e6", "d4", "d5", "Nc3", "Bb4", "e5", "c5", "a3", "Bxc3+", "bxc3", "Ne7", "Qg4"],
+        "notes": "Poisoned Pawn in Winawer; White attacks g7, extremely sharp"
+    },
+    "center_game": {
+        "eco": "C21",
+        "moves": ["e4", "e5", "d4", "exd4", "Qxd4"],
+        "notes": "Center Game; queen develops early, gains tempo but exposed"
+    },
+    "danish_gambit": {
+        "eco": "C21",
+        "moves": ["e4", "e5", "d4", "exd4", "c3"],
+        "notes": "Danish Gambit; sacrifices pawns for rapid development and attack"
+    },
+    "danish_gambit_accepted": {
+        "eco": "C21",
+        "moves": ["e4", "e5", "d4", "exd4", "c3", "dxc3", "Bc4", "cxb2", "Bxb2"],
+        "notes": "Accepted Danish; White has massive development lead for two pawns"
+    },
+    "bishops_opening": {
+        "eco": "C23",
+        "moves": ["e4", "e5", "Bc4"],
+        "notes": "Direct development; aims at f7, can transpose to Italian or gambit lines"
+    },
+    "vienna_game": {
+        "eco": "C25",
+        "moves": ["e4", "e5", "Nc3"],
+        "notes": "Flexible opening; prepares f4 or Bc4, less committal than King's Gambit"
+    },
+    "vienna_gambit": {
+        "eco": "C29",
+        "moves": ["e4", "e5", "Nc3", "Nf6", "f4"],
+        "notes": "Vienna Gambit; aggressive f4 after Nc3, sharp tactical play"
+    },
+    "vienna_game_max_lange": {
+        "eco": "C25",
+        "moves": ["e4", "e5", "Nc3", "Nc6", "Bc4"],
+        "notes": "Max Lange variation of Vienna; develops bishop early targeting f7"
+    },
+    "kings_gambit": {
+        "eco": "C30",
+        "moves": ["e4", "e5", "f4"],
+        "notes": "Romantic gambit; sacrifices f-pawn for open f-file and central initiative"
+    },
+    "kings_gambit_declined_classical": {
+        "eco": "C30",
+        "moves": ["e4", "e5", "f4", "Bc5"],
+        "notes": "Classical decline; Black develops and maintains center"
+    },
+    "kings_gambit_falkbeer_countergambit": {
+        "eco": "C31",
+        "moves": ["e4", "e5", "f4", "d5"],
+        "notes": "Falkbeer Counter-Gambit; Black strikes back at center immediately"
+    },
+    "kings_gambit_accepted": {
+        "eco": "C33",
+        "moves": ["e4", "e5", "f4", "exf4"],
+        "notes": "Accepted King's Gambit; sharp play, White aims to reclaim f4 pawn"
+    },
+    "kings_gambit_accepted_kings_knight": {
+        "eco": "C34",
+        "moves": ["e4", "e5", "f4", "exf4", "Nf3"],
+        "notes": "Knight develops attacking f4 pawn; main line of KGA"
+    },
+    "kings_gambit_accepted_bishops_gambit": {
+        "eco": "C33",
+        "moves": ["e4", "e5", "f4", "exf4", "Bc4"],
+        "notes": "Bishop's Gambit; develops with tempo aiming at f7"
+    },
+    "kings_gambit_accepted_abbazia_defense": {
+        "eco": "C36",
+        "moves": ["e4", "e5", "f4", "exf4", "Nf3", "d5"],
+        "notes": "Abbazia/Modern Defense; Black counters in center, principled approach"
+    },
+    "kings_gambit_accepted_muzio": {
+        "eco": "C37",
+        "moves": ["e4", "e5", "f4", "exf4", "Nf3", "g5", "Bc4", "g4", "O-O"],
+        "notes": "Muzio Gambit; sacrifices knight for devastating attack on open king"
+    },
+    "kings_gambit_accepted_allgaier": {
+        "eco": "C39",
+        "moves": ["e4", "e5", "f4", "exf4", "Nf3", "g5", "h4"],
+        "notes": "Allgaier Gambit; h4 destabilises Black's kingside pawn chain"
+    },
+    "philidor_defense": {
+        "eco": "C41",
+        "moves": ["e4", "e5", "Nf3", "d6"],
+        "notes": "Solid but passive; supports e5 pawn, can become cramped"
+    },
+    "philidor_hanham": {
+        "eco": "C41",
+        "moves": ["e4", "e5", "Nf3", "d6", "d4", "Nd7"],
+        "notes": "Hanham Variation; compact setup, aims for ...Be7 and ...Ngf6"
+    },
+    "petrov_defense": {
+        "eco": "C42",
+        "moves": ["e4", "e5", "Nf3", "Nf6"],
+        "notes": "Russian Game; symmetrical counterattack, solid and drawish reputation"
+    },
+    "petrov_classical": {
+        "eco": "C42",
+        "moves": ["e4", "e5", "Nf3", "Nf6", "Nxe5", "d6", "Nf3", "Nxe4", "d4"],
+        "notes": "Classical Petrov; main line with central tension"
+    },
+    "petrov_steinitz": {
+        "eco": "C43",
+        "moves": ["e4", "e5", "Nf3", "Nf6", "d4"],
+        "notes": "Steinitz Attack; immediate d4, sharp central play"
+    },
+    "scotch_game": {
+        "eco": "C44",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "d4"],
+        "notes": "Opens center early; leads to open dynamic positions"
+    },
+    "scotch_game_main_line": {
+        "eco": "C45",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "d4", "exd4", "Nxd4"],
+        "notes": "Main Scotch; knight centralizes powerfully on d4"
+    },
+    "scotch_game_classical": {
+        "eco": "C45",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "d4", "exd4", "Nxd4", "Bc5"],
+        "notes": "Classical Scotch; Black develops bishop actively pressuring d4"
+    },
+    "scotch_game_mieses": {
+        "eco": "C45",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "d4", "exd4", "Nxd4", "Nf6", "Nxc6", "bxc6"],
+        "notes": "Mieses Variation; exchange on c6, play against doubled pawns"
+    },
+    "scotch_gambit": {
+        "eco": "C44",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "d4", "exd4", "Bc4"],
+        "notes": "Scotch Gambit; develops bishop instead of recapturing, aggressive"
+    },
+    "ponziani_opening": {
+        "eco": "C44",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "c3"],
+        "notes": "Ponziani; prepares d4, old opening with traps"
+    },
+    "three_knights_game": {
+        "eco": "C46",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Nc3"],
+        "notes": "Three Knights; solid development, may transpose to Four Knights"
+    },
+    "four_knights_game": {
+        "eco": "C47",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Nc3", "Nf6"],
+        "notes": "Four Knights Game; symmetrical development, solid and classical"
+    },
+    "four_knights_scotch": {
+        "eco": "C47",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Nc3", "Nf6", "d4"],
+        "notes": "Four Knights Scotch; opens center in symmetrical position"
+    },
+    "four_knights_spanish": {
+        "eco": "C48",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Nc3", "Nf6", "Bb5"],
+        "notes": "Spanish Four Knights; Ruy Lopez ideas in symmetrical structure"
+    },
+    "four_knights_double_spanish": {
+        "eco": "C49",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Nc3", "Nf6", "Bb5", "Bb4"],
+        "notes": "Double Ruy Lopez; both sides play symmetrically with bishop pins"
+    },
+    "italian_game": {
+        "eco": "C50",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4"],
+        "notes": "Classical development; aims at f7, foundation of many tactical openings"
+    },
+    "italian_hungarian_defense": {
+        "eco": "C50",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Be7"],
+        "notes": "Hungarian Defense; passive but solid, avoids sharp Italian lines"
+    },
+    "giuoco_piano": {
+        "eco": "C53",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5"],
+        "notes": "Italian Game proper; both bishops active, classical and strategic"
+    },
+    "giuoco_piano_main_line": {
+        "eco": "C54",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "c3"],
+        "notes": "Giuoco Piano with c3; prepares d4, center-building strategy"
+    },
+    "giuoco_piano_center_attack": {
+        "eco": "C54",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "c3", "Nf6", "d4"],
+        "notes": "Center attack; main continuation with immediate central break"
+    },
+    "giuoco_pianissimo": {
+        "eco": "C53",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "d3"],
+        "notes": "Giuoco Pianissimo; slow buildup, positional maneuvering"
+    },
+    "evans_gambit": {
+        "eco": "C51",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "b4"],
+        "notes": "Romantic gambit; sacrifices b-pawn for tempo and powerful center"
+    },
+    "evans_gambit_accepted": {
+        "eco": "C52",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "b4", "Bxb4", "c3"],
+        "notes": "Evans Gambit Accepted; White builds ideal center with c3 and d4"
+    },
+    "two_knights_defense": {
+        "eco": "C55",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6"],
+        "notes": "Active defense; Black counterattacks e4 instead of passive development"
+    },
+    "two_knights_defense_open": {
+        "eco": "C55",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6", "d4"],
+        "notes": "Open variation; immediate center break leads to tactical play"
+    },
+    "two_knights_fried_liver": {
+        "eco": "C57",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6", "Ng5", "d5", "exd5", "Nxd5", "Nxf7"],
+        "notes": "Fried Liver Attack; knight sacrifice on f7, sharp king hunt"
+    },
+    "two_knights_traxler": {
+        "eco": "C57",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6", "Ng5", "Bc5"],
+        "notes": "Traxler Counter-Attack; ignores Ng5 threat, counter-targets f2"
+    },
+    "two_knights_main_line": {
+        "eco": "C58",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Nf6", "Ng5", "d5", "exd5", "Na5"],
+        "notes": "Main line; Black attacks bishop, avoids Fried Liver"
+    },
+    "ruy_lopez": {
+        "eco": "C60",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5"],
+        "notes": "Spanish Game; most classical opening, immense theory and strategic depth"
+    },
+    "ruy_lopez_birds_defense": {
+        "eco": "C61",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "Nd4"],
+        "notes": "Bird's Defense; knight jumps to d4 early, surprises but risky"
+    },
+    "ruy_lopez_old_steinitz": {
+        "eco": "C62",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "d6"],
+        "notes": "Old Steinitz Defense; solid but somewhat passive defensive setup"
+    },
+    "ruy_lopez_schliemann_gambit": {
+        "eco": "C63",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "f5"],
+        "notes": "Schliemann/Jaenisch Gambit; aggressive counter, sharp and unbalanced"
+    },
+    "ruy_lopez_classical": {
+        "eco": "C64",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "Bc5"],
+        "notes": "Classical defense; active bishop but allows White central plans"
+    },
+    "ruy_lopez_berlin": {
+        "eco": "C65",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "Nf6"],
+        "notes": "Berlin Defense; extremely solid, known as the 'Berlin Wall' in endgames"
+    },
+    "ruy_lopez_berlin_wall": {
+        "eco": "C67",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "Nf6", "O-O", "Nxe4", "d4", "Nd6", "Bxc6", "dxc6", "dxe5", "Nf5"],
+        "notes": "Berlin Wall endgame; famous for drawish but deep endgame"
+    },
+    "ruy_lopez_exchange": {
+        "eco": "C68",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Bxc6"],
+        "notes": "Exchange Ruy Lopez; damages Black's structure, play for endgame advantage"
+    },
+    "ruy_lopez_exchange_main": {
+        "eco": "C68",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Bxc6", "dxc6"],
+        "notes": "Exchange main line; Black gets bishop pair but doubled c-pawns"
+    },
+    "ruy_lopez_morphy_defense": {
+        "eco": "C70",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4"],
+        "notes": "Morphy Defense; most popular continuation, preserves bishop tension"
+    },
+    "ruy_lopez_norwegian_defense": {
+        "eco": "C70",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "b5", "Bb3", "Na5"],
+        "notes": "Norwegian/Wing Variation; aims to trade White's strong bishop"
+    },
+    "ruy_lopez_arkhangelsk": {
+        "eco": "C78",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "b5", "Bb3", "Bb7"],
+        "notes": "Arkhangelsk Variation; bishop fianchetto, active piece play"
+    },
+    "ruy_lopez_morphy_main": {
+        "eco": "C78",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O"],
+        "notes": "Morphy Defense main move; castling leads to all major Ruy Lopez systems"
+    },
+    "ruy_lopez_open_defense": {
+        "eco": "C80",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Nxe4"],
+        "notes": "Open Ruy Lopez; Black wins e4 pawn, leads to tactical complications"
+    },
+    "ruy_lopez_open_main_line": {
+        "eco": "C83",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Nxe4", "d4", "b5", "Bb3", "d5", "dxe5", "Be6"],
+        "notes": "Open Ruy Lopez main line; complex middlegame with active pieces"
+    },
+    "ruy_lopez_closed": {
+        "eco": "C84",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7"],
+        "notes": "Closed Ruy Lopez; solid and strategic, immense theoretical depth"
+    },
+    "ruy_lopez_closed_main": {
+        "eco": "C88",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3"],
+        "notes": "Closed Ruy Lopez main framework; branches into Marshall and Anti-Marshall"
+    },
+    "ruy_lopez_marshall_attack": {
+        "eco": "C89",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "O-O", "c3", "d5"],
+        "notes": "Marshall Attack; famous pawn sacrifice for powerful kingside initiative"
+    },
+    "ruy_lopez_anti_marshall": {
+        "eco": "C88",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "O-O", "d3"],
+        "notes": "Anti-Marshall; avoids Marshall gambit with quiet d3"
+    },
+    "ruy_lopez_closed_chigorin": {
+        "eco": "C96",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "d6", "c3", "O-O", "h3", "Na5", "Bc2", "c5", "d4"],
+        "notes": "Chigorin Variation; classical setup with ...Na5-c4, deep positional play"
+    },
+    "ruy_lopez_closed_breyer": {
+        "eco": "C95",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "d6", "c3", "O-O", "h3", "Nb8"],
+        "notes": "Breyer Variation; knight retreats to regroup, deep strategic play"
+    },
+    "ruy_lopez_closed_zaitsev": {
+        "eco": "C92",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "d6", "c3", "O-O", "h3", "Bb7"],
+        "notes": "Zaitsev/Flohr-Zaitsev; bishop fianchetto, flexible and dynamic"
+    },
+    "ruy_lopez_closed_smyslov": {
+        "eco": "C93",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "Be7", "Re1", "b5", "Bb3", "d6", "c3", "O-O", "h3", "h6"],
+        "notes": "Smyslov Variation; prophylactic ...h6, prevents Bg5 and prepares regrouping"
+    },
+    "queens_pawn_london": {
+        "eco": "D00",
+        "moves": ["d4", "d5", "Bf4"],
+        "notes": "London System; solid and reliable, popular at all levels"
+    },
+    "blackmar_diemer_gambit": {
+        "eco": "D00",
+        "moves": ["d4", "d5", "e4", "dxe4", "Nc3"],
+        "notes": "Aggressive gambit; White sacrifices pawn for rapid development and attack"
+    },
+    "richter_veresov_attack": {
+        "eco": "D01",
+        "moves": ["d4", "d5", "Nc3", "Nf6", "Bg5"],
+        "notes": "Veresov Attack; pins knight, combines ideas from several openings"
+    },
+    "queens_pawn_symmetrical": {
+        "eco": "D02",
+        "moves": ["d4", "d5", "Nf3", "Nf6"],
+        "notes": "Queen's Pawn Game; flexible without early c4, transposes to many systems"
+    },
+    "torre_attack": {
+        "eco": "D03",
+        "moves": ["d4", "d5", "Nf3", "Nf6", "Bg5"],
+        "notes": "Torre Attack; early Bg5 pin, solid and positional system"
+    },
+    "colle_system": {
+        "eco": "D04",
+        "moves": ["d4", "d5", "Nf3", "Nf6", "e3"],
+        "notes": "Colle System; builds pyramid center, attacks with e3-e4 break"
+    },
+    "colle_system_traditional": {
+        "eco": "D05",
+        "moves": ["d4", "d5", "Nf3", "Nf6", "e3", "e6", "Bd3", "c5", "c3"],
+        "notes": "Traditional Colle; complete setup with Bd3 and c3, aims for e4"
+    },
+    "queens_gambit": {
+        "eco": "D06",
+        "moves": ["d4", "d5", "c4"],
+        "notes": "Queen's Gambit; central pawn challenge, one of the oldest openings"
+    },
+    "chigorin_defense": {
+        "eco": "D07",
+        "moves": ["d4", "d5", "c4", "Nc6"],
+        "notes": "Chigorin Defense; knight development over ...e6, piece-oriented play"
+    },
+    "albin_countergambit": {
+        "eco": "D08",
+        "moves": ["d4", "d5", "c4", "e5"],
+        "notes": "Albin Counter-Gambit; aggressive pawn sacrifice, tricky traps"
+    },
+    "slav_defense": {
+        "eco": "D10",
+        "moves": ["d4", "d5", "c4", "c6"],
+        "notes": "Slav Defense; supports d5 with c6, keeps light bishop option open"
+    },
+    "slav_quiet_variation": {
+        "eco": "D12",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "e3"],
+        "notes": "Quiet Slav; White plays e3, calm positional development"
+    },
+    "slav_exchange": {
+        "eco": "D13",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "cxd5", "cxd5"],
+        "notes": "Slav Exchange; symmetric pawns, often leads to minority attack plans"
+    },
+    "slav_main_line": {
+        "eco": "D15",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3"],
+        "notes": "Main line Slav; major branching point for all main Slav systems"
+    },
+    "slav_czech_variation": {
+        "eco": "D17",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "dxc4", "a4", "Bf5"],
+        "notes": "Czech Slav; bishop develops to f5 before ...e6, Black's most active approach"
+    },
+    "slav_chameleon": {
+        "eco": "D15",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "a6"],
+        "notes": "Chebanenko/Chameleon Slav; flexible ...a6, delays structural commitment"
+    },
+    "queens_gambit_accepted": {
+        "eco": "D20",
+        "moves": ["d4", "d5", "c4", "dxc4"],
+        "notes": "QGA; Black takes pawn, cedes center but gains time and space"
+    },
+    "queens_gambit_accepted_main_line": {
+        "eco": "D21",
+        "moves": ["d4", "d5", "c4", "dxc4", "Nf3"],
+        "notes": "QGA main continuation; White develops naturally to recapture"
+    },
+    "queens_gambit_accepted_classical": {
+        "eco": "D27",
+        "moves": ["d4", "d5", "c4", "dxc4", "Nf3", "Nf6", "e3", "e6", "Bxc4", "c5"],
+        "notes": "Classical QGA; Black activates with ...c5, balanced play"
+    },
+    "queens_gambit_declined": {
+        "eco": "D30",
+        "moves": ["d4", "d5", "c4", "e6"],
+        "notes": "QGD; Black declines gambit with ...e6, solid defensive setup"
+    },
+    "queens_gambit_declined_tarrasch": {
+        "eco": "D32",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "c5"],
+        "notes": "Tarrasch Defense; break with ...c5, accepts isolated queen pawn"
+    },
+    "queens_gambit_declined_tarrasch_main": {
+        "eco": "D34",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "c5", "cxd5", "exd5", "Nf3", "Nc6"],
+        "notes": "Tarrasch main line; IQP position, dynamic piece play compensates"
+    },
+    "queens_gambit_declined_exchange": {
+        "eco": "D35",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "cxd5", "exd5"],
+        "notes": "Exchange QGD; symmetric pawns, minority attack is White's main plan"
+    },
+    "queens_gambit_declined_exchange_main": {
+        "eco": "D36",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "cxd5", "exd5", "Bg5"],
+        "notes": "Exchange variation with Bg5; pins knight, increases pressure on d5"
+    },
+    "queens_gambit_declined_ragozin": {
+        "eco": "D38",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Nf3", "Bb4"],
+        "notes": "Ragozin Variation; Nimzo-Indian-like pin, active counterplay"
+    },
+    "queens_gambit_declined_vienna": {
+        "eco": "D39",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Nf3", "Bb4", "Bg5", "dxc4"],
+        "notes": "Vienna Variation of Ragozin; capture leads to dynamic play"
+    },
+    "semi_slav_defense": {
+        "eco": "D43",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "e6"],
+        "notes": "Semi-Slav; combines Slav and QGD ideas, rich and complex"
+    },
+    "semi_slav_botvinnik": {
+        "eco": "D44",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "e6", "Bg5", "dxc4"],
+        "notes": "Botvinnik System; sharp pawn grab, immense theoretical depth"
+    },
+    "semi_slav_meran": {
+        "eco": "D46",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "e6", "e3", "Nbd7", "Bd3"],
+        "notes": "Meran Variation; Black prepares ...dxc4, ...b5, active queenside play"
+    },
+    "semi_slav_meran_main_line": {
+        "eco": "D47",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "e6", "e3", "Nbd7", "Bd3", "dxc4", "Bxc4", "b5"],
+        "notes": "Meran main line; ...b5 expansion, sharp tactical middlegame"
+    },
+    "semi_slav_anti_meran": {
+        "eco": "D44",
+        "moves": ["d4", "d5", "c4", "c6", "Nf3", "Nf6", "Nc3", "e6", "Bg5"],
+        "notes": "Anti-Meran with Bg5; aggressive setup against Semi-Slav"
+    },
+    "qgd_orthodox": {
+        "eco": "D53",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Be7"],
+        "notes": "Orthodox QGD; classic solid defense, deeply studied through history"
+    },
+    "qgd_cambridge_springs": {
+        "eco": "D52",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Nbd7", "Nf3", "c6", "e3", "Qa5"],
+        "notes": "Cambridge Springs; queen sortie creates tactical threats"
+    },
+    "qgd_orthodox_rubinstein": {
+        "eco": "D55",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Be7", "e3", "O-O", "Nf3"],
+        "notes": "Rubinstein system; solid development, typical QGD middlegame"
+    },
+    "qgd_lasker_defense": {
+        "eco": "D56",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Be7", "e3", "O-O", "Nf3", "h6", "Bh4", "Ne4"],
+        "notes": "Lasker Defense; Ne4 simplifies and eases Black's position"
+    },
+    "qgd_tartakower": {
+        "eco": "D58",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Be7", "e3", "O-O", "Nf3", "h6", "Bh4", "b6"],
+        "notes": "Tartakower Variation; fianchetto light bishop, dynamic and resilient"
+    },
+    "qgd_orthodox_main_line": {
+        "eco": "D60",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Bg5", "Be7", "e3", "O-O", "Nf3", "Nbd7"],
+        "notes": "Orthodox main line; classic QGD structure, slow maneuvering"
+    },
+    "grunfeld_defense": {
+        "eco": "D80",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "d5"],
+        "notes": "Grünfeld Defense; hypermodern, Black challenges center instead of holding it"
+    },
+    "grunfeld_exchange": {
+        "eco": "D85",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "d5", "cxd5", "Nxd5"],
+        "notes": "Grünfeld Exchange; White builds massive center, Black pressures it"
+    },
+    "grunfeld_exchange_classical": {
+        "eco": "D86",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "d5", "cxd5", "Nxd5", "e4", "Nxc3", "bxc3", "Bg7", "Bc4"],
+        "notes": "Classical Exchange; Bc4 develops actively, sharp theoretical battles"
+    },
+    "grunfeld_exchange_modern": {
+        "eco": "D85",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "d5", "cxd5", "Nxd5", "e4", "Nxc3", "bxc3", "Bg7", "Nf3"],
+        "notes": "Modern Exchange; Nf3 before Bc4, flexible continuation"
+    },
+    "grunfeld_russian_system": {
+        "eco": "D97",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "d5", "Nf3", "Bg7", "Qb3"],
+        "notes": "Russian System; Qb3 pressures d5, one of the main Grünfeld lines"
+    },
+    "grunfeld_russian_main": {
+        "eco": "D98",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "d5", "Nf3", "Bg7", "Qb3", "dxc4", "Qxc4", "O-O", "e4"],
+        "notes": "Russian main line; White has strong center, Black counterattacks"
+    },
+    "grunfeld_three_knights": {
+        "eco": "D90",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "d5", "Nf3"],
+        "notes": "Three Knights Grünfeld; flexible development before committing center"
+    },
+    "grunfeld_taimanov": {
+        "eco": "D90",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "d5", "Nf3", "Bg7", "Qa4+"],
+        "notes": "Taimanov Variation; early queen sortie disrupts Black's development"
+    },
+    "grunfeld_fianchetto": {
+        "eco": "D70",
+        "moves": ["d4", "Nf6", "c4", "g6", "g3", "d5"],
+        "notes": "Fianchetto Grünfeld; quiet positional approach, avoids Exchange complexity"
+    },
+    "catalan_opening": {
+        "eco": "E00",
+        "moves": ["d4", "Nf6", "c4", "e6", "g3"],
+        "notes": "Catalan; fianchetto bishop on g2, pressure on queenside and center"
+    },
+    "catalan_closed": {
+        "eco": "E01",
+        "moves": ["d4", "Nf6", "c4", "e6", "g3", "d5", "Bg2"],
+        "notes": "Closed Catalan; bishop on long diagonal, strategic pressure on d5"
+    },
+    "catalan_open": {
+        "eco": "E04",
+        "moves": ["d4", "Nf6", "c4", "e6", "g3", "d5", "Bg2", "dxc4"],
+        "notes": "Open Catalan; Black takes c4 pawn, White's Bg2 exerts long diagonal pressure"
+    },
+    "catalan_closed_main": {
+        "eco": "E06",
+        "moves": ["d4", "Nf6", "c4", "e6", "g3", "d5", "Bg2", "Be7", "Nf3"],
+        "notes": "Closed Catalan main line; classical structure with deep positional nuances"
+    },
+    "bogo_indian": {
+        "eco": "E11",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nf3", "Bb4+"],
+        "notes": "Bogo-Indian; check disrupts White's setup, flexible and solid for Black"
+    },
+    "queens_indian": {
+        "eco": "E12",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nf3", "b6"],
+        "notes": "Queen's Indian; fianchetto queen bishop, controls e4 square"
+    },
+    "queens_indian_classical": {
+        "eco": "E15",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nf3", "b6", "g3"],
+        "notes": "Classical Queen's Indian; both sides fianchetto, deep positional play"
+    },
+    "queens_indian_petrosian": {
+        "eco": "E12",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nf3", "b6", "a3"],
+        "notes": "Petrosian Variation; prevents ...Bb4+, maintains flexible center"
+    },
+    "queens_indian_fianchetto_main": {
+        "eco": "E17",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nf3", "b6", "g3", "Bb7", "Bg2", "Be7"],
+        "notes": "Fianchetto main line; quiet strategic maneuvering, prophylactic play"
+    },
+    "nimzo_indian": {
+        "eco": "E20",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4"],
+        "notes": "Nimzo-Indian; pins Nc3, one of Black's most reliable openings"
+    },
+    "nimzo_indian_three_knights": {
+        "eco": "E21",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4", "Nf3"],
+        "notes": "Three Knights Nimzo-Indian; avoids doubled pawns with flexible approach"
+    },
+    "nimzo_indian_samisch": {
+        "eco": "E24",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4", "a3", "Bxc3+", "bxc3"],
+        "notes": "Sämisch Variation; accepts doubled pawns for bishop pair and center"
+    },
+    "nimzo_indian_leningrad": {
+        "eco": "E30",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4", "Bg5"],
+        "notes": "Leningrad Variation; Bg5 puts pressure, dynamic middlegame"
+    },
+    "nimzo_indian_classical": {
+        "eco": "E32",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4", "Qc2"],
+        "notes": "Classical/Capablanca Variation; Qc2 prevents doubled pawns"
+    },
+    "nimzo_indian_hubner": {
+        "eco": "E41",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4", "e3", "c5"],
+        "notes": "Hübner Variation; ...c5 challenges center, rich strategic play"
+    },
+    "nimzo_indian_fischer": {
+        "eco": "E43",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4", "e3", "b6"],
+        "notes": "Fischer Variation; queen bishop fianchetto, flexible approach"
+    },
+    "nimzo_indian_normal_4e3": {
+        "eco": "E40",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4", "e3"],
+        "notes": "Rubinstein/Normal Variation; most popular, solid center building"
+    },
+    "nimzo_indian_reshevsky": {
+        "eco": "E46",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4", "e3", "O-O"],
+        "notes": "Reshevsky Variation; immediate castling, flexible pawn structure"
+    },
+    "nimzo_indian_main_line": {
+        "eco": "E54",
+        "moves": ["d4", "Nf6", "c4", "e6", "Nc3", "Bb4", "e3", "O-O", "Bd3", "d5", "Nf3", "c5", "O-O"],
+        "notes": "Main line Nimzo-Indian; complete development, deep strategic middlegame"
+    },
+    "kings_indian_defense": {
+        "eco": "E60",
+        "moves": ["d4", "Nf6", "c4", "g6"],
+        "notes": "King's Indian; hypermodern, kingside fianchetto with dynamic counterplay"
+    },
+    "kings_indian_normal": {
+        "eco": "E61",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3"],
+        "notes": "Normal KID; most common path to main King's Indian lines"
+    },
+    "kings_indian_fianchetto": {
+        "eco": "E62",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "Nf3", "d6", "g3"],
+        "notes": "Fianchetto system; quiet positional approach, avoids sharp KID theory"
+    },
+    "kings_indian_fianchetto_main": {
+        "eco": "E69",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "Nf3", "d6", "g3", "O-O", "Bg2", "Nbd7", "O-O", "e5"],
+        "notes": "Fianchetto main line; balanced position, central tension"
+    },
+    "kings_indian_four_pawns_attack": {
+        "eco": "E76",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "f4"],
+        "notes": "Four Pawns Attack; massive center but risk of overextension"
+    },
+    "kings_indian_averbakh": {
+        "eco": "E73",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Be2", "O-O", "Bg5"],
+        "notes": "Averbakh system; Bg5 delays Nf3, restricts Black's options"
+    },
+    "kings_indian_samisch": {
+        "eco": "E80",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "f3"],
+        "notes": "Sämisch Variation; f3 supports center, prepares Be3 and Qd2"
+    },
+    "kings_indian_samisch_orthodox": {
+        "eco": "E85",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "f3", "O-O", "Be3", "e5"],
+        "notes": "Sämisch Orthodox; typical KID plan with ...e5, complex middlegame"
+    },
+    "kings_indian_samisch_panno": {
+        "eco": "E83",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "f3", "O-O", "Be3", "Nc6"],
+        "notes": "Panno Variation in Sämisch; ...Nc6 delays ...e5, queenside-oriented plan"
+    },
+    "kings_indian_classical": {
+        "eco": "E90",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3"],
+        "notes": "Classical KID; main line with natural development, immense theory"
+    },
+    "kings_indian_classical_main": {
+        "eco": "E92",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5"],
+        "notes": "Classical main line; central tension defines the character of play"
+    },
+    "kings_indian_classical_orthodox": {
+        "eco": "E94",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5", "O-O"],
+        "notes": "Orthodox Classical; White castles, mutual plans crystallize"
+    },
+    "kings_indian_classical_orthodox_main": {
+        "eco": "E97",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5", "O-O", "Nc6"],
+        "notes": "Mar del Plata setup; Black prepares ...Nd4 or ...f5 kingside attack"
+    },
+    "kings_indian_mar_del_plata": {
+        "eco": "E99",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5", "O-O", "Nc6", "d5", "Ne7"],
+        "notes": "Mar del Plata; classic KID, opposite-side attacks — White queenside, Black kingside"
+    },
+    "kings_indian_makogonov": {
+        "eco": "E71",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "h3"],
+        "notes": "Makogonov Variation; prophylactic h3 prevents ...Bg4, slow flexible buildup"
+    },
+    "kings_indian_petrosian_system": {
+        "eco": "E92",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5", "d5"],
+        "notes": "Petrosian System; d5 closes center, play on opposite flanks"
+    },
+    "kings_indian_bayonet_attack": {
+        "eco": "E97",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5", "O-O", "Nc6", "d5", "Ne7", "b4"],
+        "notes": "Bayonet Attack; b4 advance starts queenside offensive, modern and aggressive"
+    },
+    "kings_indian_gligoric_system": {
+        "eco": "E92",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5", "Be3"],
+        "notes": "Gligoric System; Be3 supports d4, flexible central approach"
+    },
+    "kings_indian_exchange": {
+        "eco": "E92",
+        "moves": ["d4", "Nf6", "c4", "g6", "Nc3", "Bg7", "e4", "d6", "Nf3", "O-O", "Be2", "e5", "dxe5"],
+        "notes": "Exchange Variation; simplifies center, reduces Black's dynamic chances"
+    },
+    "italian_game_giuoco_pianissimo_modern": {
+        "eco": "C54",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bc4", "Bc5", "c3", "Nf6", "d3"],
+        "notes": "Modern Giuoco Pianissimo; slow buildup with d3 instead of d4, popular at top level"
+    },
+    "sicilian_dragon_accelerated_fianchetto": {
+        "eco": "B35",
+        "moves": ["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "g6", "Nc3", "Bg7"],
+        "notes": "Accelerated Dragon with Bg7; delays ...Nf6, flexible piece placement"
+    },
+    "sicilian_najdorf_fischer_sozin": {
+        "eco": "B87",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Bc4"],
+        "notes": "Fischer-Sozin Attack; Bc4 targets f7, aggressive and direct"
+    },
+    "sicilian_pelikan": {
+        "eco": "B33",
+        "moves": ["e4", "c5", "Nf3", "Nc6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "e5", "Ndb5", "d6"],
+        "notes": "Pelikan/Sveshnikov; dynamic center play, Black accepts structural weaknesses for activity"
+    },
+    "sicilian_four_knights": {
+        "eco": "B40",
+        "moves": ["e4", "c5", "Nf3", "e6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "Nc6"],
+        "notes": "Sicilian Four Knights; can transpose to Sveshnikov or Taimanov ideas"
+    },
+    "queens_gambit_declined_semi_tarrasch": {
+        "eco": "D40",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Nf6", "Nf3", "c5"],
+        "notes": "Semi-Tarrasch; ...c5 without prior ...dxc4, flexible and dynamic"
+    },
+    "sicilian_najdorf_6f3": {
+        "eco": "B90",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "f3"],
+        "notes": "6.f3 variation; English Attack foundation, prepares Be3-Qd2-g4"
+    },
+    "ruy_lopez_steinitz_deferred": {
+        "eco": "C79",
+        "moves": ["e4", "e5", "Nf3", "Nc6", "Bb5", "a6", "Ba4", "Nf6", "O-O", "d6"],
+        "notes": "Steinitz Defense Deferred; solid ...d6, restricts central play"
+    },
+    "london_system": {
+        "eco": "D00",
+        "moves": ["d4", "d5", "Bf4"],
+        "notes": "London System; universally applicable, early Bf4 defines the opening"
+    },
+    "catalan_open_main": {
+        "eco": "E05",
+        "moves": ["d4", "Nf6", "c4", "e6", "g3", "d5", "Bg2", "dxc4", "Nf3"],
+        "notes": "Open Catalan main line; White recovers pawn with long-term pressure"
+    },
+    "dutch_defense_hopton_attack": {
+        "eco": "A80",
+        "moves": ["d4", "f5", "Bg5"],
+        "notes": "Hopton Attack; early Bg5 pin disturbs Black's setup"
+    },
+    "grunfeld_neo_grunfeld": {
+        "eco": "D71",
+        "moves": ["d4", "Nf6", "c4", "g6", "g3", "d5", "Bg2"],
+        "notes": "Neo-Grünfeld; fianchetto treatment, positional pressure on d5"
+    },
+    "english_opening_botvinnik": {
+        "eco": "A36",
+        "moves": ["c4", "c5", "Nc3", "Nc6", "g3", "g6", "Bg2", "Bg7", "e4"],
+        "notes": "Botvinnik system in English; e4 grabs space, strong central formation"
+    },
+    "vienna_game_falkbeer": {
+        "eco": "C26",
+        "moves": ["e4", "e5", "Nc3", "Nf6"],
+        "notes": "Vienna with Falkbeer approach; can lead to sharp theoretical play"
+    },
+    "queens_gambit_declined_alatortsev": {
+        "eco": "D31",
+        "moves": ["d4", "d5", "c4", "e6", "Nc3", "Be7"],
+        "notes": "Alatortsev Variation; early ...Be7 avoids pin, solid but passive"
+    },
+    "reti_kings_indian_attack": {
+        "eco": "A07",
+        "moves": ["Nf3", "d5", "g3", "Nf6", "Bg2", "c6", "O-O"],
+        "notes": "King's Indian Attack via Réti; flexible system good against many Black setups"
+    },
+    "sicilian_najdorf_6be2": {
+        "eco": "B92",
+        "moves": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6", "Nc3", "a6", "Be2", "e5"],
+        "notes": "Najdorf 6.Be2 with ...e5; common continuation, balanced central play"
+    },
+    "kings_gambit_declined": {
+        "eco": "C30",
+        "moves": ["e4", "e5", "f4", "d6"],
+        "notes": "KG Declined with ...d6; solid approach, Black maintains center"
+    }
 }

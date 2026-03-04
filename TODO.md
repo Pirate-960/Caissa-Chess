@@ -1,8 +1,8 @@
 # 📋 CAISSA Development TODO List
 
-**Last Updated**: February 4, 2026  
-**Current Version**: v0.3.2 (Phase 3.2+ Enhanced Benchmarking Complete)  
-**Tests**: 264 passed, 13 skipped
+**Last Updated**: March 4, 2026  
+**Current Version**: v0.4.0 (Interactive CLI & Configuration Overhaul)  
+**Tests**: 933 passed, 13 skipped
 
 ---
 
@@ -103,9 +103,26 @@
 - [x] `benchmarks/report_generator.py` - HTML/Markdown reports
 - [x] `tests/test_phase32_plus.py` - 94 comprehensive tests
 
+### v0.4.0 - Interactive CLI & Configuration Overhaul (March 2026) ✅
+- [x] Unified interactive CLI (`main.py`) with guided prompts
+- [x] YAML configuration system (`config_manager.py` + `caissa_config.yaml`)
+- [x] 5-mode bias system: WHITE / BLACK / DRAW / RANDOM / NEUTRAL
+- [x] Batch generation engine (`core/batch_engine.py`) with sequential & parallel modes
+- [x] BatchSpinner — animated chess-piece spinner with progress bar
+- [x] FEN + FinalFEN position headers in exported PGN
+- [x] Round header enrichment (single-gen + batch)
+- [x] Unified export pipeline (`export/game_exporter.py`) — PGN/HTML/MD/JSON
+- [x] Annotation parser (`export/annotation_parser.py`)
+- [x] Structured logging infrastructure (`log_manager.py`)
+- [x] Console logs toggle (`console_logs` config field)
+- [x] 3-tier Gemini model discovery (`core/model_discovery.py`)
+- [x] Provider factory (`core/provider_factory.py`)
+- [x] 933 tests across 25 test modules (100% passing)
+- [x] Documentation cleanup — removed 6 obsolete root docs
+
 ---
 
-## 🟡 Future Enhancements (Post v0.3.x)
+## 🟡 Future Enhancements (Addressed in v0.3.x – v0.4.0) ✅
 
 ### Priority 1: Live API Testing 🔥
 
@@ -491,7 +508,7 @@
 
 ---
 
-## 🔵 TODO (v0.3.0 - Stockfish Integration)
+## 🔵 DONE (v0.3.0 - Stockfish Integration) ✅
 
 ### Phase 1: Stockfish Client (Weeks 3-4)
 
@@ -650,9 +667,9 @@
 
 ---
 
-## 🟣 TODO (v0.4.0 - Quality & Analysis)
+## 🟣 TODO (v0.6.0 - Quality & Analysis)
 
-### Phase 1: Auto-Annotation (Week 7)
+### Phase 1: Auto-Annotation
 
 #### Markdown Report Generator
 - [ ] **Implement `export/markdown_report.py`**
@@ -794,9 +811,29 @@
 
 ---
 
-## � TODO (v0.5.0 - Web Interface & API)
+## 🟢 TODO (v0.5.0 - LLM vs LLM Tournament Mode)
 
-### Phase 1: Backend Foundation (Week 1-2)
+### Architecture
+- [ ] Move-by-move generation (two LLMs alternating turns)
+- [ ] Turn-based prompt injection (feed current board FEN per move)
+- [ ] Match engine with configurable move limits / draw adjudication
+- [ ] Legal move enforcement bridge between turns
+
+### Tournament System
+- [ ] Tournament brackets (round-robin, Swiss, elimination)
+- [ ] ELO rating tracker across providers / models
+- [ ] Head-to-head statistics and win-rate matrices
+
+### Export & Analysis
+- [ ] Tournament PGN export with both provider names as players
+- [ ] Per-match commentary and summary reports
+- [ ] See `docs/LLM_VS_LLM.md` for full architecture
+
+---
+
+## � TODO (v0.7.0 - Web Interface & API)
+
+### Phase 1: Backend Foundation
 
 #### Project Setup
 - [ ] **FastAPI Project Structure**
@@ -1333,20 +1370,26 @@
 | v0.3.0 | Stockfish + Phase 3.1 | ✅ Complete | 100% | Feb 3, 2026 |
 | v0.3.1 | Quality & Testing (Phase 3.2) | ✅ Complete | 100% | Feb 3, 2026 |
 | v0.3.2 | Enhanced Benchmarking (Phase 3.2+) | ✅ Complete | 100% | Feb 4, 2026 |
-| v0.4.0 | Quality & Analysis | 🔵 Planned | 0% | Mar 2026 |
-| v0.5.0 | Web Interface & API | 🔵 Planned | 0% | Apr-May 2026 |
-| v1.0.0 | Production Ready | 🟠 Planned | 0% | Jun 2026 |
+| v0.4.0 | Interactive CLI & Configuration | ✅ Complete | 100% | Mar 4, 2026 |
+| v0.5.0 | LLM vs LLM Tournament | 🔵 Planned | 0% | Apr 2026 |
+| v0.6.0 | Quality & Analysis | 🔵 Planned | 0% | May 2026 |
+| v0.7.0 | Web Interface & API | 🔵 Planned | 0% | Jun-Jul 2026 |
+| v1.0.0 | Production Ready | 🟠 Planned | 0% | Aug 2026 |
 
-### Current Sprint: v0.3.2 Complete ✅
+### Current Sprint: v0.4.0 Complete ✅
 | Task | Priority | Status | Notes |
 |------|----------|--------|-------|
-| Rich console output | P1 | ✅ Complete | Color & charts |
-| Quality analyzer | P1 | ✅ Complete | Chess-specific |
-| Benchmark history | P2 | ✅ Complete | Trend analysis |
-| Report generator | P1 | ✅ Complete | HTML/Markdown |
-| 264 tests passing | P1 | ✅ Complete | 13 skipped (live) |
+| Unified CLI (`main.py`) | P1 | ✅ Complete | Interactive prompts |
+| YAML config system | P1 | ✅ Complete | `caissa_config.yaml` |
+| 5-mode bias system | P1 | ✅ Complete | W / B / D / R / N |
+| BatchEngine + Spinner | P1 | ✅ Complete | Parallel & sequential |
+| FEN/FinalFEN headers | P2 | ✅ Complete | python-chess replay |
+| Provider factory | P2 | ✅ Complete | `provider_factory.py` |
+| Model discovery | P2 | ✅ Complete | 3-tier Gemini |
+| Structured logging | P2 | ✅ Complete | `log_manager.py` |
+| 933 tests passing | P1 | ✅ Complete | 13 skipped (live) |
 
-### v0.5.0 Web Interface Tech Stack
+### v0.7.0 Web Interface Tech Stack
 | Component | Technology | Status |
 |-----------|------------|--------|
 | Backend | FastAPI + Uvicorn | 📋 Planned |
@@ -1367,8 +1410,10 @@
 ✅ v0.3.0: Stockfish + Phase 3.1    [██████████] 100%
 ✅ v0.3.1: Quality & Testing        [██████████] 100%
 ✅ v0.3.2: Enhanced Benchmarking    [██████████] 100%
-🔵 v0.4.0: Quality & Analysis       [░░░░░░░░░░]   0%
-🔵 v0.5.0: Web Interface & API      [░░░░░░░░░░]   0%
+✅ v0.4.0: Interactive CLI & Config  [██████████] 100%
+🔵 v0.5.0: LLM vs LLM Tournament   [░░░░░░░░░░]   0%
+🔵 v0.6.0: Quality & Analysis       [░░░░░░░░░░]   0%
+🔵 v0.7.0: Web Interface & API      [░░░░░░░░░░]   0%
 🟠 v1.0.0: Production Ready         [░░░░░░░░░░]   0%
 ```
 
@@ -1378,13 +1423,12 @@ Jan 31, 2026: v0.1.0 - Core Architecture      ✅ COMPLETE
 Feb  2, 2026: v0.2.0 - Multi-Provider LLM     ✅ COMPLETE
 Feb  3, 2026: v0.3.0 - Stockfish + Phase 3.1  ✅ COMPLETE
 Feb  3, 2026: v0.3.1 - Quality & Testing      ✅ COMPLETE
-Feb  4, 2026: v0.3.2 - Enhanced Benchmarking  ✅ COMPLETE
-Mar  7, 2026: v0.4.0 - Quality & Analysis
-May  2, 2026: v0.5.0 - Web Interface & API (6 weeks)
-Jun 15, 2026: v1.0.0 - Production Ready
-May 16, 2026: v0.9.0 - Docker & Deployment
-May 30, 2026: v1.0.0 - Production Ready
-Jun 15, 2026: v1.1.0 - Research Paper Submission
+Feb  4, 2026: v0.3.2 - Enhanced Benchmarking   ✅ COMPLETE
+Mar  4, 2026: v0.4.0 - Interactive CLI & Config  ✅ COMPLETE
+Apr     2026: v0.5.0 - LLM vs LLM Tournament
+May     2026: v0.6.0 - Quality & Analysis
+Jun-Jul 2026: v0.7.0 - Web Interface & API
+Aug     2026: v1.0.0 - Production Ready
 ```
 
 ---
@@ -1568,22 +1612,22 @@ gh pr create --base develop
 ### Getting Started
 1. Read [docs/SETUP.md](docs/SETUP.md) for installation
 2. Read [docs/PROVIDERS.md](docs/PROVIDERS.md) for LLM configuration
-3. Run `poetry install` to set up environment
-4. Run `poetry run pytest tests/ -v` to verify setup (264 passed, 13 skipped)
+3. Run `pip install -e .` to set up environment
+4. Run `pytest tests/ -v` to verify setup (933 passed, 13 skipped)
 
 ### Contributing
-1. Check the "Future Enhancements" section for upcoming tasks
+1. Check the TODO sections for upcoming tasks
 2. Pick a task matching your skills
 3. Create a feature branch (`feat/task-name`)
 4. Update this TODO when starting/completing tasks
 5. Submit PR with detailed description
 
-### Current Status (v0.3.2)
-**Status**: Phase 3.2+ Enhanced Benchmarking Complete ✅
-- 264 tests passing, 13 skipped (live API tests)
+### Current Status (v0.4.0)
+**Status**: v0.4.0 Interactive CLI & Configuration Overhaul Complete ✅
+- 933 tests passing, 13 skipped (live API tests)
+- Unified CLI, YAML config, 5-mode bias, batch engine
+- FEN/FinalFEN headers, model discovery, structured logging
 - Full benchmarking suite with rich console output
-- HTML/Markdown report generation
-- Historical trend analysis
 
 ---
 
@@ -1609,8 +1653,8 @@ gh pr create --base develop
 
 ---
 
-**Last Updated**: February 4, 2026  
-**Status**: v0.3.2 Complete | 264 Tests Passing  
+**Last Updated**: March 4, 2026  
+**Status**: v0.4.0 Complete | 933 Tests Passing  
 **Owner**: CAISSA Development Team  
 
 Good luck! 🚀♟️

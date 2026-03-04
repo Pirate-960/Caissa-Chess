@@ -38,12 +38,8 @@ from engine.legality import LegalityValidator
 from engine.stockfish_client import StockfishClient
 from aesthetic.beauty_eval import BeautyEvaluator
 
-# Configure logging
+# Configure logging — handlers are wired by log_manager.setup_logging()
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 
 
 # =============================================================================
@@ -498,6 +494,7 @@ class CaissaGenerator:
                 
                 # Store in conversation history
                 self.conversation_history.append((effective_user_prompt, llm_response))
+                logger.info("LLM response received: %d chars (attempt %d)", len(llm_response), retry_count + 1)
                 
                 # Step C: Clean the response
                 self._update_progress(GenerationStage.MOVE_PARSING)
@@ -516,13 +513,21 @@ class CaissaGenerator:
                 self._update_progress(GenerationStage.LEGALITY_CHECK)
                 is_valid, errors = self.validator.validate_game_pgn(pgn_text)
                 
-                logger.debug(f"Validation result: is_valid={is_valid}, errors={errors}")  # Debug
+                logger.info(
+                    "Validation %s (attempt %d): %d error(s)",
+                    "PASSED" if is_valid else "FAILED", retry_count + 1, len(errors),
+                )
+                if errors:
+                    logger.debug("Validation errors: %s", errors)
                 
                 if is_valid:
                     # Step E: Success!
                     self._update_progress(GenerationStage.FINALIZATION)
                     elapsed = time.time() - start_time
-                    logger.info(f"Game successfully generated in {elapsed:.1f}s")
+                    logger.info(
+                        "Game generated in %.1fs (%d attempts)",
+                        elapsed, retry_count + 1,
+                    )
 
                     # Extract moves from PGN for downstream formatting
                     extracted_moves = self.validator.extract_moves_from_pgn(pgn_text)
@@ -553,9 +558,11 @@ class CaissaGenerator:
                     self._current_progress.attempts = retry_count
                     self._current_progress.errors.append(last_error)
                     logger.warning(
-                        f"Illegal move detected. Retrying (Attempt {retry_count}/{self.max_retries})..."
+                        "Illegal move on attempt %d/%d: %s",
+                        retry_count, self.max_retries,
+                        errors[0] if errors else "unknown error",
                     )
-                    logger.debug(f"Error details: {last_error}")
+                    logger.debug("Full error feedback:\n%s", last_error)
             
             except Exception as e:
                 error_msg = f"LLM API error: {type(e).__name__}: {str(e)}"
@@ -630,13 +637,17 @@ class CaissaGenerator:
         """
         feedback = "The game contains the following legal violations:\n\n"
         
-        for i, error in enumerate(errors[:3], 1):  # Limit to first 3 errors
+        for i, error in enumerate(errors[:5], 1):  # Show up to first 5 errors
             feedback += f"{i}. {error}\n"
         
-        if len(errors) > 3:
-            feedback += f"\n... and {len(errors) - 3} more errors.\n"
+        if len(errors) > 5:
+            feedback += f"\n... and {len(errors) - 5} more errors.\n"
         
-        feedback += "\nPlease review the position carefully and ensure all moves are legal according to chess rules."
+        feedback += (
+            "\nPlease review the position carefully and ensure all moves "
+            "are legal according to chess rules. Verify piece placement "
+            "step-by-step before each move."
+        )
         
         return feedback
 

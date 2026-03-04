@@ -1,7 +1,10 @@
 """
 caissa.py
 
-Main entry point for CAISSA - The Aesthetic Chess Engine.
+DEPRECATED — Use ``python main.py`` or the ``caissa`` CLI command instead.
+This file will be removed in v0.4.
+
+Original entry point for CAISSA - The Aesthetic Chess Engine.
 Example: python caissa.py generate --style romantic --theme "Queen Sacrifice"
 
 PHASE 3.1 ENHANCEMENTS:
@@ -670,27 +673,36 @@ def cmd_generate(args):
             success, pgn_string, moves = generator.generate_game(context)
             
             if success:
-                # Enhance PGN with pretty formatting if requested
-                if getattr(args, 'pretty', False):
-                    pgn_string = _enhance_pgn_formatting(pgn_string, moves)
+                # Use unified export pipeline
+                from export.annotation_parser import parse_pgn
+                from export.game_exporter import GameExporter
+                
+                parsed_game = parse_pgn(pgn_string)
+                exporter = GameExporter(game=parsed_game)
+                formatted_pgn = exporter.export_pgn()
                 
                 # Save PGN to file
                 output_path = Path(args.output)
-                output_path.write_text(pgn_string)
+                output_path.write_text(formatted_pgn, encoding="utf-8")
+                
+                ann_count = sum(1 for m in parsed_game.moves if m.comment or m.nags)
+                opening_info = f"  Opening: {parsed_game.eco}: {parsed_game.opening_name}" if parsed_game.eco else ""
                 
                 print()
                 print("=" * 70)
                 print(f"✅ Game generated successfully!")
                 print(f"📄 Saved to: {output_path.absolute()}")
-                print(f"🎯 Total moves: {len(moves)}")
-                print(f"✨ Pretty format: {getattr(args, 'pretty', False)}")
+                print(f"🎯 Total moves: {parsed_game.move_count}")
+                print(f"📝 Annotations: {ann_count}")
+                if opening_info:
+                    print(f"♟️{opening_info}")
                 print("=" * 70)
                 print()
                 print("PGN Preview:")
                 print("-" * 70)
                 
                 # Display formatted PGN
-                display_pgn = PGNWriter.format_for_display(pgn_string)
+                display_pgn = PGNWriter.format_for_display(formatted_pgn)
                 print(display_pgn)
                 
                 print("-" * 70)
@@ -765,50 +777,8 @@ def _enhance_pgn_formatting(pgn_string: str, moves: List[Dict[str, Any]]) -> str
 
 def _create_llm_provider(provider_name: str):
     """Create an LLM provider based on the provider name."""
-    from core.llm_provider import (
-        OpenAIProvider, 
-        AnthropicProvider, 
-        GoogleGeminiProvider,
-        OllamaProvider,
-    )
-    
-    provider_name = provider_name.lower()
-    
-    if provider_name == "openai":
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key or api_key.startswith("sk-..."):
-            raise ValueError("OPENAI_API_KEY not configured in .env")
-        return OpenAIProvider(api_key=api_key, model="gpt-4o")
-        
-    elif provider_name == "anthropic":
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key or api_key.startswith("sk-ant-..."):
-            raise ValueError("ANTHROPIC_API_KEY not configured in .env")
-        return AnthropicProvider(api_key=api_key)
-        
-    elif provider_name == "gemini":
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key or api_key == "YOUR_GEMINI_API_KEY_HERE":
-            raise ValueError("GOOGLE_API_KEY not configured in .env")
-        # Use gemini-2.0-flash for reliable access (gemini-3 requires higher tier)
-        return GoogleGeminiProvider(api_key=api_key, model="gemini-2.5-pro")
-        
-    elif provider_name == "deepseek":
-        api_key = os.getenv("DEEPSEEK_API_KEY")
-        if not api_key:
-            raise ValueError("DEEPSEEK_API_KEY not configured in .env")
-        return OpenAIProvider(
-            api_key=api_key, 
-            model="deepseek-chat",
-            base_url="https://api.deepseek.com"
-        )
-        
-    elif provider_name == "ollama":
-        return OllamaProvider()
-        
-    else:
-        raise ValueError(f"Unknown LLM provider: {provider_name}. "
-                        f"Supported: openai, anthropic, gemini, deepseek, ollama")
+    from core.provider_factory import create_provider
+    return create_provider(provider_name)
 
 
 def cmd_list_styles(args):
@@ -984,13 +954,17 @@ def cmd_batch(args):
                 success, pgn_string, moves = generator.generate_game(context)
                 
                 if success:
-                    # Enhance PGN with pretty formatting if requested
-                    if getattr(args, 'pretty', False):
-                        pgn_string = _enhance_pgn_formatting(pgn_string, moves)
+                    # Use unified export pipeline
+                    from export.annotation_parser import parse_pgn as _parse_pgn
+                    from export.game_exporter import GameExporter as _GameExporter
+                    
+                    parsed = _parse_pgn(pgn_string)
+                    _exporter = _GameExporter(game=parsed, style_name=style_name)
+                    formatted_pgn = _exporter.export_pgn()
                     
                     # Save PGN to file
                     filename = output_dir / f"game_{game_num:03d}.pgn"
-                    filename.write_text(pgn_string)
+                    filename.write_text(formatted_pgn, encoding="utf-8")
                     
                     results.games.append(str(filename))
                     results.successful += 1
@@ -1259,7 +1233,7 @@ def cmd_version(args):
     print("""
     CAISSA: The Aesthetic Chess Engine
     
-    Version: 0.3.1 (Phase 3.1 - Enhanced PGN Output)
+    Version: 0.3.2 (Phase 3.2+ - Enhanced Benchmarking)
     
     Components:
     - Core Generator: v3.0
@@ -1288,11 +1262,13 @@ def cmd_version(args):
 
 def enhance_core_generator():
     """
-    Monkey-patch the core generator to use our enhanced PGN formatting.
+    Monkey-patch the core generator to use the unified export pipeline.
     This function would be called at startup.
     """
     try:
         from core.generator import CaissaGenerator
+        from export.annotation_parser import parse_pgn
+        from export.game_exporter import GameExporter
         
         original_generate_game = CaissaGenerator.generate_game
         
@@ -1301,7 +1277,9 @@ def enhance_core_generator():
             success, pgn_string, moves = original_generate_game(self, context)
             
             if success and pretty_format:
-                pgn_string = _enhance_pgn_formatting(pgn_string, moves)
+                parsed = parse_pgn(pgn_string)
+                exporter = GameExporter(game=parsed)
+                pgn_string = exporter.export_pgn()
             
             return success, pgn_string, moves
         
@@ -1319,7 +1297,14 @@ def enhance_core_generator():
 # =============================================================================
 
 def main():
-    """Main entry point."""
+    """Main entry point (DEPRECATED — use ``python main.py`` or ``caissa`` instead)."""
+    import warnings
+    warnings.warn(
+        "caissa.py is deprecated and will be removed in v0.4. "
+        "Use 'python main.py' or the 'caissa' CLI command instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     # Force UTF-8 for Windows console
     if sys.platform == "win32":
         try:

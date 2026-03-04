@@ -38,7 +38,7 @@ import logging
 # Add parent directory for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-logging.basicConfig(level=logging.INFO)
+# Handlers are wired by log_manager.setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -228,34 +228,10 @@ Return the game in PGN format with annotations.""",
 def create_provider(provider_name: str) -> tuple:
     """Create a provider instance. Returns (provider, model_name) or (None, error)."""
     try:
-        if provider_name == "openai":
-            from core.llm_provider import OpenAIProvider
-            model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-            return OpenAIProvider(model=model), model
-        
-        elif provider_name == "anthropic":
-            from core.llm_provider import AnthropicProvider
-            model = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
-            return AnthropicProvider(model=model), model
-        
-        elif provider_name == "azure":
-            from core.llm_provider import AzureOpenAIProvider
-            model = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4")
-            return AzureOpenAIProvider(deployment_name=model), model
-        
-        elif provider_name == "gemini":
-            from core.llm_provider import GoogleGeminiProvider
-            model = os.getenv("GEMINI_MODEL", "gemini-pro")
-            return GoogleGeminiProvider(model=model), model
-        
-        elif provider_name == "ollama":
-            from core.llm_provider import OllamaProvider
-            model = os.getenv("OLLAMA_MODEL", "llama2")
-            return OllamaProvider(model=model), model
-        
-        else:
-            return None, f"Unknown provider: {provider_name}"
-            
+        from core.provider_factory import create_provider as factory_create
+        provider = factory_create(provider_name)
+        model = provider.model if hasattr(provider, 'model') else provider_name
+        return provider, model
     except Exception as e:
         return None, str(e)
 

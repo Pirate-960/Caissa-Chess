@@ -67,7 +67,7 @@ class NAG(IntEnum):
     SPACE = 36             # Space advantage
     ATTACK = 40            # Attack
     INITIATIVE = 44        # Initiative
-    COMPENSATION = 44      # Compensation for material
+    COMPENSATION = 45      # Compensation for material
     
     # Time pressure
     TIME_PRESSURE = 136    # Time pressure

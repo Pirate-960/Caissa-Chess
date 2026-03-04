@@ -172,20 +172,19 @@ class TestGoogleGeminiProvider:
     """Test suite for Google Gemini provider."""
     
     def test_initialization_with_api_key(self):
-        """Should initialize with provided API key."""
-        with patch('google.generativeai.configure'):
-            with patch('google.generativeai.GenerativeModel'):
-                provider = GoogleGeminiProvider(api_key="test-key")
-                assert provider.model == "gemini-pro"
-                assert provider.max_tokens == 4096
+        """Should initialize with provided API key (new SDK tier-1)."""
+        with patch('google.genai.Client'):
+            provider = GoogleGeminiProvider(api_key="test-key")
+            assert provider.model == "gemini-3-flash"
+            assert provider.max_tokens == 8192
+            assert provider._use_new_sdk is True
     
     def test_initialization_from_env(self):
         """Should read API key from environment variable."""
         with patch('os.getenv', return_value="env-key"):
-            with patch('google.generativeai.configure'):
-                with patch('google.generativeai.GenerativeModel'):
-                    provider = GoogleGeminiProvider()
-                    assert provider.api_key == "env-key"
+            with patch('google.genai.Client'):
+                provider = GoogleGeminiProvider()
+                assert provider.api_key == "env-key"
     
     def test_initialization_without_key_raises_error(self):
         """Should raise ValueError if no API key provided."""
@@ -193,43 +192,114 @@ class TestGoogleGeminiProvider:
             with pytest.raises(ValueError, match="Google API key not provided"):
                 GoogleGeminiProvider()
     
+    def test_initialization_tier2_old_sdk(self):
+        """Should fall back to tier-2 (deprecated SDK) when new SDK absent."""
+        # Block new SDK import so tier-1 fails
+        original_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
+
+        def _selective_import(name, *args, **kwargs):
+            if name == 'google.genai' or (name == 'google' and 'genai' in str(args)):
+                raise ImportError("No google.genai")
+            return original_import(name, *args, **kwargs)
+
+        with patch('builtins.__import__', side_effect=_selective_import):
+            with patch('google.generativeai.configure'):
+                with patch('google.generativeai.GenerativeModel'):
+                    provider = GoogleGeminiProvider(api_key="test-key")
+                    assert provider._use_new_sdk is False
+                    assert provider._use_old_sdk is True
+                    assert provider._use_rest is False
+
+    def test_initialization_tier3_rest(self):
+        """Should fall back to tier-3 (REST API) when no SDK installed."""
+        # Block both SDKs
+        original_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
+
+        def _selective_import(name, *args, **kwargs):
+            if 'google' in name and ('genai' in name or 'generativeai' in name):
+                raise ImportError("No google SDK")
+            if name == 'google' and args and 'genai' in str(args):
+                raise ImportError("No google SDK")
+            return original_import(name, *args, **kwargs)
+
+        with patch('builtins.__import__', side_effect=_selective_import):
+            provider = GoogleGeminiProvider(api_key="test-key")
+            assert provider._use_new_sdk is False
+            assert provider._use_old_sdk is False
+            assert provider._use_rest is True
+
     def test_custom_model_configuration(self):
         """Should support custom model selection."""
-        with patch('google.generativeai.configure'):
-            with patch('google.generativeai.GenerativeModel'):
-                provider = GoogleGeminiProvider(
-                    api_key="test-key",
-                    model="gemini-pro-vision",
-                    max_tokens=8192
-                )
-                assert provider.model == "gemini-pro-vision"
-                assert provider.max_tokens == 8192
+        with patch('google.genai.Client'):
+            provider = GoogleGeminiProvider(
+                api_key="test-key",
+                model="gemini-pro-vision",
+                max_tokens=8192
+            )
+            assert provider.model == "gemini-pro-vision"
+            assert provider.max_tokens == 8192
     
     def test_generate_success(self):
-        """Should generate response successfully."""
+        """Should generate response successfully (tier-1 new SDK)."""
         mock_response = Mock()
         mock_response.text = "1. e4 e5 2. Nf3 1-0"
-        
-        mock_model = Mock()
-        mock_model.generate_content.return_value = mock_response
-        
-        with patch('google.generativeai.configure'):
-            with patch('google.generativeai.GenerativeModel', return_value=mock_model):
-                provider = GoogleGeminiProvider(api_key="test-key")
-                
-                result = provider.generate(
-                    system_prompt="You are a chess expert",
-                    user_prompt="Generate a game",
-                    temperature=0.9
-                )
-                
-                assert result == "1. e4 e5 2. Nf3 1-0"
-                mock_model.generate_content.assert_called_once()
+
+        mock_client = Mock()
+        mock_client.models.generate_content.return_value = mock_response
+
+        with patch('google.genai.Client', return_value=mock_client):
+            provider = GoogleGeminiProvider(api_key="test-key")
+
+            result = provider.generate(
+                system_prompt="You are a chess expert",
+                user_prompt="Generate a game",
+                temperature=0.9
+            )
+
+            assert result == "1. e4 e5 2. Nf3 1-0"
+            mock_client.models.generate_content.assert_called_once()
+
+    def test_generate_rest_success(self):
+        """Should generate response successfully via REST API (tier-3)."""
+        # Block both SDKs to force REST
+        original_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
+
+        def _selective_import(name, *args, **kwargs):
+            if 'google' in name and ('genai' in name or 'generativeai' in name):
+                raise ImportError("No google SDK")
+            if name == 'google' and args and 'genai' in str(args):
+                raise ImportError("No google SDK")
+            return original_import(name, *args, **kwargs)
+
+        with patch('builtins.__import__', side_effect=_selective_import):
+            provider = GoogleGeminiProvider(api_key="test-key", model="gemini-2.0-flash")
+
+        assert provider._use_rest is True
+
+        # Mock the requests.post call in generate()
+        mock_resp = Mock()
+        mock_resp.raise_for_status = Mock()
+        mock_resp.json.return_value = {
+            "candidates": [{
+                "content": {
+                    "parts": [{"text": "1. d4 d5 2. c4 0-1"}]
+                }
+            }]
+        }
+
+        with patch('requests.post', return_value=mock_resp) as mock_post:
+            result = provider.generate(
+                system_prompt="You are a chess expert",
+                user_prompt="Generate a game",
+                temperature=0.7
+            )
+            assert result == "1. d4 d5 2. c4 0-1"
+            mock_post.assert_called_once()
     
     def test_missing_package_raises_import_error(self):
-        """Should raise ImportError if google-generativeai not installed."""
-        with patch('builtins.__import__', side_effect=ImportError("No module named 'google'")):
-            with pytest.raises(ImportError, match="google-generativeai package required"):
+        """Should raise ImportError if no SDK and no requests library."""
+        with patch('builtins.__import__', side_effect=ImportError("No module named")):
+            with pytest.raises(ImportError, match="No Gemini SDK|requests"):
                 GoogleGeminiProvider(api_key="test-key")
 
 

@@ -333,8 +333,8 @@ class LegalityValidator:
             # Extract all move tokens from movetext
             extracted_moves = self._extract_moves_from_pgn(movetext)
             
-            # Debug: print extracted moves
-            logger.debug(f"Extracted moves: {extracted_moves}")
+            logger.info("Validating %d extracted moves", len(extracted_moves))
+            logger.debug("Extracted moves: %s", extracted_moves)
             
             # Validate each move manually
             temp_board = chess.Board()
@@ -342,24 +342,36 @@ class LegalityValidator:
                 try:
                     move = temp_board.parse_san(move_str)
                     if move not in temp_board.legal_moves:
+                        fen = temp_board.fen()
                         errors.append(f"Move {i+1}: '{move_str}' is illegal")
+                        logger.warning(
+                            "Illegal move %d: '%s' — FEN: %s", i + 1, move_str, fen,
+                        )
                         return False, errors
                     temp_board.push(move)
+                    logger.debug("Move %d OK: %s", i + 1, move_str)
                 except chess.InvalidMoveError as e:
                     errors.append(f"Move {i+1}: '{move_str}' is an invalid move: {e}")
+                    logger.warning("Invalid move %d: '%s' — %s", i + 1, move_str, e)
                     return False, errors
                 except chess.IllegalMoveError as e:
                     errors.append(f"Move {i+1}: '{move_str}' is an illegal move: {e}")
+                    logger.warning("Illegal move %d: '%s' — %s", i + 1, move_str, e)
                     return False, errors
                 except chess.AmbiguousMoveError as e:
                     errors.append(f"Move {i+1}: '{move_str}' is ambiguous: {e}")
+                    logger.warning("Ambiguous move %d: '%s' — %s", i + 1, move_str, e)
                     return False, errors
                 except ValueError as e:
                     errors.append(f"Move {i+1}: '{move_str}' parse error: {e}")
+                    logger.warning("Parse error move %d: '%s' — %s", i + 1, move_str, e)
                     return False, errors
                 except Exception as e:
                     errors.append(f"Move {i+1}: '{move_str}' unexpected error: {e}")
+                    logger.error("Unexpected error move %d: '%s' — %s", i + 1, move_str, e)
                     return False, errors
+
+            logger.info("Validation passed: all %d moves legal", len(extracted_moves))
 
         return True, errors
 
