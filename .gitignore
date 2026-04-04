@@ -63,5 +63,5 @@ engines/
 # Logs
 logs/
 
-# Output
+# Output - Experimental
 games/*
