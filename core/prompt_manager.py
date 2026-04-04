@@ -16,6 +16,7 @@ PHASE 3.1 ENHANCEMENTS:
 Original functionality 100% preserved.
 """
 
+import random
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Literal, List, Dict, Callable, Tuple
@@ -110,6 +111,22 @@ class DifficultyLevel(str, Enum):
 # ORIGINAL DATACLASS (100% PRESERVED)
 # =============================================================================
 
+class PromptBias(str, Enum):
+    """Bias for game generation.
+
+    WHITE   – Force White to win (1-0).
+    BLACK   – Force Black to win (0-1).
+    DRAW    – Force a draw (1/2-1/2).
+    RANDOM  – Randomly assign one of 1-0 / 0-1 / 1/2-1/2 each game.
+    NEUTRAL – Let the LLM decide the most dramatically satisfying result.
+    """
+    WHITE = "white"
+    BLACK = "black"
+    DRAW = "draw"
+    RANDOM = "random"
+    NEUTRAL = "neutral"
+
+
 @dataclass
 class GameContext:
     """Configuration for a single game generation."""
@@ -121,7 +138,7 @@ class GameContext:
     chaos_score: int = 5  # 1-10, higher = more surprising moves
     depth: int = 40  # Half-moves in the game
     blunder_tolerance: float = 1.5  # Centipawns allowed on weaker moves
-    force_win: bool = True  # Does White need to win?
+    bias: PromptBias = PromptBias.NEUTRAL  # Bias the game outcome
 
 
 # =============================================================================
@@ -187,7 +204,7 @@ class AdvancedGameContext(GameContext):
             "chaos_score": self.chaos_score,
             "depth": self.depth,
             "blunder_tolerance": self.blunder_tolerance,
-            "force_win": self.force_win,
+            "bias": self.bias.value,
             "narrative_arc": self.narrative_arc.value if self.narrative_arc else None,
             "difficulty": self.difficulty.value,
             "target_beauty_score": self.target_beauty_score,
@@ -283,7 +300,7 @@ Before you generate a single move, THINK through the narrative arc:
 
 5. **The Conclusion Phase** (Final moves):
    - Force checkmate or win material decisively.
-   - The game should end with White winning or Black making a brilliant defensive stand.
+   - {conclusion_objective}
 
 ### CRITICAL RULES
 1. **ONLY USE STANDARD ALGEBRAIC NOTATION** (e.g., "e4", "Nf3", "O-O")
@@ -301,7 +318,7 @@ Return the game in this exact format:
 [Date "{date}"]
 [White "{white_player}"]
 [Black "{black_player}"]
-[Result "1-0"]
+[Result "{expected_result}"]
 [Annotator "Caissa"]
 
 1. e4 e5 2. Nf3 Nc6 3. Bb5! ...
@@ -610,6 +627,12 @@ Generate now. Think deeply. Make every move count. The chessboard awaits your ma
 
     def build_system_prompt(self, context: GameContext) -> str:
         """Build the system prompt for the LLM."""
+        logger.info(
+            "Building system prompt: era=%s, theme=%s, aggression=%d/10",
+            context.era.value,
+            context.theme.value if context.theme else "auto",
+            context.aggression_score,
+        )
         era_guidelines = self.ERA_GUIDELINES.get(
             context.era, self.ERA_GUIDELINES[GameEra.ROMANTIC]
         )
@@ -624,7 +647,35 @@ Generate now. Think deeply. Make every move count. The chessboard awaits your ma
             aggression_description = "calculated but ambitious"
         else:
             aggression_description = "positional"
-        
+
+        # V3.3: Add bias-based conclusion + expected PGN result
+        if context.bias == PromptBias.WHITE:
+            conclusion_objective = "The game should end with White winning or Black making a brilliant defensive stand."
+            expected_result = "1-0"
+        elif context.bias == PromptBias.BLACK:
+            conclusion_objective = "The game should end with Black winning or White making a brilliant defensive stand."
+            expected_result = "0-1"
+        elif context.bias == PromptBias.DRAW:
+            conclusion_objective = "The game should end in a hard-fought draw — whether by repetition, perpetual check, stalemate, or agreed peace after equal play."
+            expected_result = "1/2-1/2"
+        elif context.bias == PromptBias.RANDOM:
+            # Randomly assign a concrete result for variety
+            expected_result = random.choice(["1-0", "0-1", "1/2-1/2"])
+            if expected_result == "1-0":
+                conclusion_objective = "The game should be a hard-fought battle that White narrowly wins."
+            elif expected_result == "0-1":
+                conclusion_objective = "The game should be a hard-fought battle that Black narrowly wins."
+            else:
+                conclusion_objective = "The game should be a hard-fought, evenly-matched battle ending in a draw."
+        else:  # NEUTRAL — let the LLM decide
+            expected_result = "*"
+            conclusion_objective = (
+                "The outcome is entirely yours to decide. Choose the most dramatically "
+                "satisfying ending — White wins (1-0), Black wins (0-1), or draw (1/2-1/2). "
+                "You MUST pick a concrete result; do NOT leave it as '*'. "
+                "Update the [Result] header in the PGN output to match your chosen conclusion."
+            )
+
         return self.SYSTEM_TEMPLATE.format(
             era=context.era.value,
             theme=context.theme.value if context.theme else "Your choice of brilliant concept",
@@ -638,10 +689,39 @@ Generate now. Think deeply. Make every move count. The chessboard awaits your ma
             era_guidelines=era_guidelines,
             theme_instruction=theme_instruction,
             aggression_description=aggression_description,
+            conclusion_objective=conclusion_objective,
+            expected_result=expected_result,
         )
 
     def build_user_prompt(self, context: GameContext) -> str:
         """Build the user prompt (final trigger) for the LLM."""
+        logger.info(
+            "Building user prompt: depth=%d, white=%s, black=%s",
+            context.depth, context.white_player, context.black_player,
+        )
+        
+        # V3.4: Add bias-based outcome
+        if context.bias == PromptBias.WHITE:
+            outcome_text = "White should win decisively or achieve a significant advantage."
+        elif context.bias == PromptBias.BLACK:
+            outcome_text = "Black should win decisively or achieve a significant advantage."
+        elif context.bias == PromptBias.DRAW:
+            outcome_text = "The game should end in a draw after a tense, evenly-matched battle."
+        elif context.bias == PromptBias.RANDOM:
+            pick = random.choice(["1-0", "0-1", "1/2-1/2"])
+            if pick == "1-0":
+                outcome_text = "White should narrowly win after a hard-fought battle."
+            elif pick == "0-1":
+                outcome_text = "Black should narrowly win after a hard-fought battle."
+            else:
+                outcome_text = "The game should be an evenly-matched battle ending in a draw."
+        else:  # NEUTRAL — let the LLM decide
+            outcome_text = (
+                "You decide the result. Choose whichever concrete outcome — White wins (1-0), "
+                "Black wins (0-1), or draw (1/2-1/2) — makes the most dramatically "
+                "satisfying conclusion for this game. Do NOT leave the result as '*'."
+            )
+
         user_prompt = f"""
 Generate a {context.depth} half-move chess game with the following specifications:
 
@@ -651,7 +731,7 @@ Generate a {context.depth} half-move chess game with the following specification
 **White Player**: {context.white_player}
 **Black Player**: {context.black_player}
 
-**Expected Outcome**: White should {'win decisively' if context.force_win else 'achieve a decisive advantage or draw'}.
+**Expected Outcome**: {outcome_text}
 
 Now, thinking step-by-step through the Concept → Spark → Climax → Conclusion framework, 
 generate the complete PGN game:
@@ -907,7 +987,7 @@ Make sure the conclusion is aesthetically satisfying.
 Output the final moves with the result (1-0, 0-1, or 1/2-1/2)."""
         
         conclusion_user = f"""Conclude the game with a satisfying ending.
-Expected result: {'1-0 (White wins)' if context.force_win else 'Any decisive result'}
+Expected result: {'1-0 (White wins)' if context.bias == PromptBias.WHITE else '0-1 (Black wins)' if context.bias == PromptBias.BLACK else 'Any decisive result'}
 
 Finish the game beautifully."""
         

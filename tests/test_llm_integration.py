@@ -323,14 +323,16 @@ class TestErrorFeedback:
         assert "Bxe5" in feedback
     
     def test_construct_error_feedback_multiple_errors(self):
-        """Test feedback limits to first 3 errors."""
+        """Test feedback limits to first 5 errors."""
         generator = CaissaGenerator()
         errors = [
             "Error 1",
             "Error 2",
             "Error 3",
             "Error 4",
-            "Error 5"
+            "Error 5",
+            "Error 6",
+            "Error 7",
         ]
         
         feedback = generator._construct_error_feedback(errors)
@@ -338,7 +340,9 @@ class TestErrorFeedback:
         assert "Error 1" in feedback
         assert "Error 2" in feedback
         assert "Error 3" in feedback
-        assert "2 more errors" in feedback  # 5 - 3 = 2
+        assert "Error 4" in feedback
+        assert "Error 5" in feedback
+        assert "2 more errors" in feedback  # 7 - 5 = 2
 
 
 if __name__ == "__main__":

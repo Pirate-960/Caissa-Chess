@@ -1,7 +1,10 @@
 """
 caissa.py
 
-Main entry point for CAISSA - The Aesthetic Chess Engine.
+DEPRECATED — Use ``python main.py`` or the ``caissa`` CLI command instead.
+This file will be removed in v0.4.
+
+Original entry point for CAISSA - The Aesthetic Chess Engine.
 Example: python caissa.py generate --style romantic --theme "Queen Sacrifice"
 
 PHASE 3.1 ENHANCEMENTS:
@@ -15,6 +18,14 @@ PHASE 3.1 ENHANCEMENTS:
 - Opening book integration
 
 Original functionality 100% preserved.
+Enhanced with clean PGN output formatting and Phase 3.1 features.
+
+Key improvements:
+1. Beautifully formatted PGN output with proper indentation
+2. Annotations neatly organized next to each move
+3. Comments in proper PGN format with { } brackets
+4. Header section separated from moves
+5. Move numbers aligned for readability
 """
 
 import argparse
@@ -22,11 +33,19 @@ import sys
 import os
 import json
 import time
+import textwrap
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, rely on system environment
 
 from core.generator import CaissaGenerator, GameContext
 from core.prompt_manager import GameEra, GameTheme
@@ -181,6 +200,172 @@ class SessionStats:
 
 
 # =============================================================================
+# PGN FORMATTER - NEW UTILITY FOR CLEAN PGN OUTPUT
+# =============================================================================
+
+class PGNWriter:
+    """Utility class for creating well-formatted PGN output."""
+    
+    @staticmethod
+    def format_headers(headers: Dict[str, str]) -> str:
+        """
+        Format PGN headers in standard format.
+        
+        Args:
+            headers: Dictionary of PGN headers
+            
+        Returns:
+            Formatted headers string
+        """
+        result = []
+        # Standard headers in conventional order
+        standard_order = ['Event', 'Site', 'Date', 'Round', 'White', 'Black', 'Result']
+        
+        # Add standard headers first
+        for key in standard_order:
+            if key in headers:
+                value = headers[key]
+                result.append(f'[{key} "{value}"]')
+        
+        # Add any remaining headers
+        for key, value in headers.items():
+            if key not in standard_order:
+                result.append(f'[{key} "{value}"]')
+        
+        return '\n'.join(result)
+    
+    @staticmethod
+    def format_moves_with_comments(moves: List[Dict[str, Any]], max_line_width: int = 80) -> str:
+        """
+        Format moves with comments in a readable PGN format.
+        
+        Args:
+            moves: List of move dictionaries with 'san', 'comment', and 'eval' keys
+            max_line_width: Maximum line width before wrapping
+            
+        Returns:
+            Formatted moves string
+        """
+        if not moves:
+            return "*"
+        
+        result_lines = []
+        current_line = ""
+        move_number = 1
+        
+        for i, move_data in enumerate(moves):
+            is_white_move = (i % 2 == 0)
+            
+            if is_white_move:
+                # Start new line with move number
+                if current_line:
+                    result_lines.append(current_line.rstrip())
+                current_line = f"{move_number}. "
+                move_number += 1
+            
+            # Add the move
+            san_move = move_data.get('san', '')
+            if san_move:
+                current_line += f"{san_move} "
+            
+            # Add comment if available
+            comment = move_data.get('comment', '')
+            eval_note = move_data.get('eval', '')
+            
+            if comment or eval_note:
+                # Build comment text
+                comment_parts = []
+                if eval_note:
+                    comment_parts.append(f"Eval: {eval_note}")
+                if comment:
+                    comment_parts.append(comment)
+                
+                comment_text = " | ".join(comment_parts)
+                
+                # Wrap long comments
+                if len(comment_text) > 60:
+                    wrapped_comment = textwrap.fill(
+                        comment_text, 
+                        width=60,
+                        initial_indent="  ",
+                        subsequent_indent="  "
+                    )
+                    # Split into lines and add as separate comments
+                    for line in wrapped_comment.split('\n'):
+                        current_line += f"{{ {line.strip()} }} "
+                else:
+                    current_line += f"{{ {comment_text} }} "
+            
+            # Check if line is getting too long
+            if len(current_line) > max_line_width and is_white_move:
+                # Only break at white moves (start of a pair)
+                result_lines.append(current_line.rstrip())
+                current_line = ""
+        
+        # Add the last line if not empty
+        if current_line:
+            result_lines.append(current_line.rstrip())
+        
+        return '\n'.join(result_lines)
+    
+    @staticmethod
+    def format_full_game(headers: Dict[str, str], moves: List[Dict[str, Any]], 
+                         result: str = "*") -> str:
+        """
+        Format a complete PGN game with headers and moves.
+        
+        Args:
+            headers: Dictionary of PGN headers
+            moves: List of move dictionaries
+            result: Game result (e.g., "1-0", "0-1", "1/2-1/2")
+            
+        Returns:
+            Complete PGN string
+        """
+        # Ensure result is in headers
+        headers['Result'] = result
+        
+        # Format headers
+        headers_str = PGNWriter.format_headers(headers)
+        
+        # Format moves
+        moves_str = PGNWriter.format_moves_with_comments(moves)
+        
+        # Combine with proper spacing
+        return f"{headers_str}\n\n{moves_str} {result}"
+    
+    @staticmethod
+    def format_for_display(pgn_string: str, show_headers: bool = True) -> str:
+        """
+        Format PGN string for display in console with enhanced readability.
+        
+        Args:
+            pgn_string: Raw PGN string
+            show_headers: Whether to include headers in display
+            
+        Returns:
+            Formatted display string
+        """
+        lines = pgn_string.split('\n')
+        formatted_lines = []
+        
+        in_moves = False
+        for line in lines:
+            line = line.rstrip()
+            
+            if line.startswith('['):
+                if show_headers:
+                    formatted_lines.append(line)
+            elif line:
+                if not in_moves:
+                    formatted_lines.append("")  # Blank line between headers and moves
+                    in_moves = True
+                formatted_lines.append(f"  {line}")
+        
+        return '\n'.join(formatted_lines)
+
+
+# =============================================================================
 # ORIGINAL PARSER (PRESERVED) + PHASE 3.1 ENHANCEMENTS
 # =============================================================================
 
@@ -270,6 +455,11 @@ Examples:
         default=None,
         help="Load configuration from JSON file",
     )
+    generate_parser.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Generate pretty PGN format with indentation and comments",
+    )
     
     # List styles command
     subparsers.add_parser("list-styles", help="List available styles")
@@ -308,6 +498,16 @@ Examples:
         "--parallel",
         action="store_true",
         help="Generate games in parallel (requires async provider)",
+    )
+    batch_parser.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Generate pretty PGN format",
+    )
+    batch_parser.add_argument(
+        "--annotate",
+        action="store_true",
+        help="Include annotations and commentary",
     )
     
     # Interactive REPL command
@@ -356,6 +556,11 @@ Examples:
         default="matchup.pgn",
         help="Output filename",
     )
+    matchup_parser.add_argument(
+        "--pretty",
+        action="store_true",
+        help="Generate pretty PGN format",
+    )
     
     # Stats command
     subparsers.add_parser("stats", help="Show generation statistics")
@@ -367,7 +572,7 @@ Examples:
 
 
 # =============================================================================
-# ORIGINAL COMMAND HANDLERS (100% PRESERVED)
+# ORIGINAL COMMAND HANDLERS (ENHANCED WITH PRETTY PGN)
 # =============================================================================
 
 def cmd_generate(args):
@@ -403,12 +608,24 @@ def cmd_generate(args):
         except KeyError:
             print(f"Warning: Unknown theme '{args.theme}'. Proceeding without specific theme.")
     
+    # Parse era
+    era_map = {
+        "classical": GameEra.CLASSICAL,
+        "romantic": GameEra.ROMANTIC,
+        "hypermodern": GameEra.HYPERMODERN,
+        "modern": GameEra.SOVIET,      # Map "modern" to Soviet School
+        "computer": GameEra.COMPUTER,
+        "soviet": GameEra.SOVIET,
+        "neural": GameEra.NEURAL,
+    }
+    era = era_map.get(args.era.lower(), GameEra.ROMANTIC)
+    
     # Create context
     slider = StyleSlider()
     style_config = slider.get_config(style)
     
     context = GameContext(
-        era=GameEra.ROMANTIC,  # TODO: Make this configurable
+        era=era,
         theme=theme,
         white_player=args.white,
         black_player=args.black,
@@ -420,25 +637,148 @@ def cmd_generate(args):
     print(f"\nConfiguration:")
     print(f"  Style: {style_config.style_name}")
     print(f"  Theme: {theme.value if theme else 'None'}")
+    print(f"  Era: {era.value}")
     print(f"  White: {args.white}")
     print(f"  Black: {args.black}")
     print(f"  Aggression: {args.aggression}/10")
     print(f"  Chaos: {args.chaos}/10")
+    print(f"  Pretty output: {getattr(args, 'pretty', False)}")
     print(f"  Output: {args.output}")
     print()
     
-    # Initialize generator
-    generator = CaissaGenerator()
+    # Get LLM provider from environment
+    llm_provider_name = os.getenv("LLM_PROVIDER", "openai").lower()
+    stockfish_path = os.getenv("STOCKFISH_PATH")
     
-    print("Status: Generator initialized")
-    print("Status: LLM client required (set OPENAI_API_KEY)")
-    print()
-    print("Note: To actually generate a game, configure an LLM client:")
-    print("  from core.generator import SimpleOpenAIClient")
-    print("  generator.set_llm_client(SimpleOpenAIClient())")
-    print("  success, pgn, moves = generator.generate_game(context)")
+    print(f"Status: Configuring LLM provider ({llm_provider_name})...")
     
-    return True
+    try:
+        provider = _create_llm_provider(llm_provider_name)
+        print(f"Status: ✅ {type(provider).__name__} initialized")
+    except Exception as e:
+        print(f"Error: Failed to initialize LLM provider: {e}")
+        return False
+    
+    # Initialize generator with Stockfish path and provider
+    print(f"Status: Initializing generator...")
+    with CaissaGenerator(provider=provider, stockfish_path=stockfish_path) as generator:
+        print(f"Status: ✅ Generator ready")
+        print()
+        print("=" * 70)
+        print("🎭 Generating Aesthetic Chess Game...")
+        print("=" * 70)
+        print()
+        
+        try:
+            success, pgn_string, moves = generator.generate_game(context)
+            
+            if success:
+                # Use unified export pipeline
+                from export.annotation_parser import parse_pgn
+                from export.game_exporter import GameExporter
+                
+                parsed_game = parse_pgn(pgn_string)
+                exporter = GameExporter(game=parsed_game)
+                formatted_pgn = exporter.export_pgn()
+                
+                # Save PGN to file
+                output_path = Path(args.output)
+                output_path.write_text(formatted_pgn, encoding="utf-8")
+                
+                ann_count = sum(1 for m in parsed_game.moves if m.comment or m.nags)
+                opening_info = f"  Opening: {parsed_game.eco}: {parsed_game.opening_name}" if parsed_game.eco else ""
+                
+                print()
+                print("=" * 70)
+                print(f"✅ Game generated successfully!")
+                print(f"📄 Saved to: {output_path.absolute()}")
+                print(f"🎯 Total moves: {parsed_game.move_count}")
+                print(f"📝 Annotations: {ann_count}")
+                if opening_info:
+                    print(f"♟️{opening_info}")
+                print("=" * 70)
+                print()
+                print("PGN Preview:")
+                print("-" * 70)
+                
+                # Display formatted PGN
+                display_pgn = PGNWriter.format_for_display(formatted_pgn)
+                print(display_pgn)
+                
+                print("-" * 70)
+                
+                return True
+            else:
+                print(f"❌ Game generation failed")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Error during generation: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+
+def _enhance_pgn_formatting(pgn_string: str, moves: List[Dict[str, Any]]) -> str:
+    """
+    Enhance PGN formatting with proper indentation and organization.
+    
+    Args:
+        pgn_string: Original PGN string
+        moves: List of move dictionaries with comments
+        
+    Returns:
+        Enhanced PGN string
+    """
+    # Parse headers from original PGN
+    lines = pgn_string.strip().split('\n')
+    headers = {}
+    moves_start = 0
+    
+    for i, line in enumerate(lines):
+        if line.startswith('['):
+            # Parse header
+            key_start = line.find('[') + 1
+            key_end = line.find(' ')
+            value_start = line.find('"') + 1
+            value_end = line.rfind('"')
+            
+            if key_end > key_start and value_end > value_start:
+                key = line[key_start:key_end]
+                value = line[value_start:value_end]
+                headers[key] = value
+        elif line.strip() and not moves_start:
+            moves_start = i
+            break
+    
+    # Extract result if present
+    result = headers.get('Result', '*')
+    
+    # Convert moves to format expected by PGNWriter
+    formatted_moves = []
+    for move_data in moves:
+        if isinstance(move_data, dict):
+            formatted_move = {
+                'san': move_data.get('san', ''),
+                'comment': move_data.get('comment', ''),
+                'eval': move_data.get('eval', '')
+            }
+        else:
+            formatted_move = {
+                'san': str(move_data),
+                'comment': '',
+                'eval': ''
+            }
+        formatted_moves.append(formatted_move)
+    
+    # Create enhanced PGN
+    return PGNWriter.format_full_game(headers, formatted_moves, result)
+
+
+def _create_llm_provider(provider_name: str):
+    """Create an LLM provider based on the provider name."""
+    from core.provider_factory import create_provider
+    return create_provider(provider_name)
 
 
 def cmd_list_styles(args):
@@ -544,7 +884,19 @@ def cmd_batch(args):
     print(f"  Base style: {args.style}")
     print(f"  Vary styles: {args.vary_style}")
     print(f"  Parallel: {args.parallel}")
+    print(f"  Pretty format: {getattr(args, 'pretty', False)}")
     print()
+    
+    # Get LLM provider
+    llm_provider_name = os.getenv("LLM_PROVIDER", "openai").lower()
+    stockfish_path = os.getenv("STOCKFISH_PATH")
+    
+    try:
+        provider = _create_llm_provider(llm_provider_name)
+        print(f"✅ LLM provider initialized: {type(provider).__name__}")
+    except Exception as e:
+        print(f"❌ Failed to initialize LLM provider: {e}")
+        return False
     
     # Get available styles for variation
     slider = StyleSlider()
@@ -558,36 +910,105 @@ def cmd_batch(args):
         elapsed_time=0,
     )
     
-    for i in range(args.count):
-        game_num = i + 1
+    # Initialize generator once (reused for each game)
+    with CaissaGenerator(provider=provider, stockfish_path=stockfish_path) as generator:
+        print(f"✅ Generator ready for batch processing")
+        print()
         
-        # Select style
-        if args.vary_style:
-            style = available_styles[i % len(available_styles)]
-            print(f"[{game_num}/{args.count}] Generating with style: {style.value}")
-        else:
+        for i in range(args.count):
+            game_num = i + 1
+            
+            # Select style
+            if args.vary_style:
+                style = available_styles[i % len(available_styles)]
+                style_name = style.value
+                print(f"[{game_num}/{args.count}] Generating with style: {style_name}")
+            else:
+                style_name = args.style.lower()
+                print(f"[{game_num}/{args.count}] Generating with style: {style_name}")
+            
             try:
-                style = StylePreset(args.style.lower())
-            except ValueError:
-                style = StylePreset.MORPHY
-            print(f"[{game_num}/{args.count}] Generating with style: {style.value}")
-        
-        filename = output_dir / f"game_{game_num:03d}.pgn"
-        
-        # Note: Actual generation requires LLM provider
-        # This is a placeholder for the batch framework
-        print(f"  → Would save to: {filename}")
-        results.games.append(str(filename))
-        results.successful += 1
+                # Parse style
+                try:
+                    style_enum = StylePreset(style_name)
+                except ValueError:
+                    print(f"  Warning: Unknown style '{style_name}', using 'morphy'")
+                    style_enum = StylePreset.MORPHY
+                
+                # Get style config
+                style_config = slider.get_config(style_enum)
+                
+                # Create game context
+                context = GameContext(
+                    era=GameEra.ROMANTIC,  # Default era
+                    theme=None,  # No specific theme for batch
+                    white_player=f"Caissa {style_config.style_name}",
+                    black_player="Caissa Opponent",
+                    aggression_score=style_config.aggression,
+                    chaos_score=style_config.chaos,
+                    depth=style_config.stockfish_depth,
+                )
+                
+                # Generate the game
+                print(f"  Status: Generating...")
+                success, pgn_string, moves = generator.generate_game(context)
+                
+                if success:
+                    # Use unified export pipeline
+                    from export.annotation_parser import parse_pgn as _parse_pgn
+                    from export.game_exporter import GameExporter as _GameExporter
+                    
+                    parsed = _parse_pgn(pgn_string)
+                    _exporter = _GameExporter(game=parsed, style_name=style_name)
+                    formatted_pgn = _exporter.export_pgn()
+                    
+                    # Save PGN to file
+                    filename = output_dir / f"game_{game_num:03d}.pgn"
+                    filename.write_text(formatted_pgn, encoding="utf-8")
+                    
+                    results.games.append(str(filename))
+                    results.successful += 1
+                    
+                    print(f"  ✅ Saved to: {filename}")
+                    print(f"  Moves: {len(moves)}")
+                else:
+                    results.failed += 1
+                    results.errors.append(f"Game {game_num}: Generation failed")
+                    print(f"  ❌ Generation failed")
+                    
+            except Exception as e:
+                results.failed += 1
+                error_msg = f"Game {game_num}: {str(e)[:100]}"
+                results.errors.append(error_msg)
+                print(f"  ❌ Error: {str(e)[:100]}")
+            
+            print()  # Blank line between games
     
     results.elapsed_time = time.time() - start_time
     
     print()
     print("=" * 70)
+    print("BATCH GENERATION COMPLETE")
+    print("=" * 70)
     print(results.summary())
+    
+    if results.failed > 0:
+        print(f"\nFailed games ({results.failed}):")
+        for error in results.errors[:5]:  # Show first 5 errors
+            print(f"  - {error}")
+        if len(results.errors) > 5:
+            print(f"  ... and {len(results.errors) - 5} more errors")
+    
+    if results.successful > 0:
+        print(f"\nGenerated games ({results.successful}):")
+        for game in results.games[:5]:  # Show first 5 games
+            print(f"  - {game}")
+        if len(results.games) > 5:
+            print(f"  ... and {len(results.games) - 5} more games")
+    
     print("=" * 70)
     
-    return True
+    return results.failed == 0
 
 
 def cmd_interactive(args):
@@ -747,6 +1168,7 @@ def cmd_matchup(args):
     print(f"  Black: {args.black_player}")
     print(f"  Opening: {args.opening or 'Random'}")
     print(f"  Output: {args.output}")
+    print(f"  Pretty format: {getattr(args, 'pretty', False)}")
     print()
     
     # Map player names to styles
@@ -811,7 +1233,7 @@ def cmd_version(args):
     print("""
     CAISSA: The Aesthetic Chess Engine
     
-    Version: 0.3.0 (Phase 3.1 - Advanced Features)
+    Version: 0.3.2 (Phase 3.2+ - Enhanced Benchmarking)
     
     Components:
     - Core Generator: v3.0
@@ -819,7 +1241,13 @@ def cmd_version(args):
     - Legality Engine: v3.1 (with suggestions)
     - Beauty Evaluator: v3.1 (with pattern recognition)
     - Style Slider: v3.1 (with 20 player profiles)
-    - PGN Builder: v3.1 (with NAG support)
+    - PGN Builder: v3.1 (with Enhanced Formatting)
+    
+    New Features:
+    - Pretty PGN output with proper indentation
+    - Organized move comments aligned with moves
+    - Standard PGN header formatting
+    - Line wrapping for long comments
     
     Python: 3.11+
     License: MIT
@@ -829,11 +1257,67 @@ def cmd_version(args):
 
 
 # =============================================================================
+# ENHANCED CORE GENERATOR INTEGRATION
+# =============================================================================
+
+def enhance_core_generator():
+    """
+    Monkey-patch the core generator to use the unified export pipeline.
+    This function would be called at startup.
+    """
+    try:
+        from core.generator import CaissaGenerator
+        from export.annotation_parser import parse_pgn
+        from export.game_exporter import GameExporter
+        
+        original_generate_game = CaissaGenerator.generate_game
+        
+        def enhanced_generate_game(self, context, pretty_format=True):
+            """Enhanced version that returns well-formatted PGN."""
+            success, pgn_string, moves = original_generate_game(self, context)
+            
+            if success and pretty_format:
+                parsed = parse_pgn(pgn_string)
+                exporter = GameExporter(game=parsed)
+                pgn_string = exporter.export_pgn()
+            
+            return success, pgn_string, moves
+        
+        # Apply the patch
+        CaissaGenerator.generate_game = enhanced_generate_game
+        
+        print("Enhanced PGN formatting enabled in core generator")
+        
+    except ImportError as e:
+        print(f"Warning: Could not enhance core generator: {e}")
+
+
+# =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
 
 def main():
-    """Main entry point."""
+    """Main entry point (DEPRECATED — use ``python main.py`` or ``caissa`` instead)."""
+    import warnings
+    warnings.warn(
+        "caissa.py is deprecated and will be removed in v0.4. "
+        "Use 'python main.py' or the 'caissa' CLI command instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    # Force UTF-8 for Windows console
+    if sys.platform == "win32":
+        try:
+            import io
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+        except Exception as e:
+            # Fallback for environments where this isn't possible
+            print(f"Warning: Could not set UTF-8 output encoding: {e}")
+
+    # Enhance core generator for pretty PGN output
+    enhance_core_generator()
+    
     parser = create_parser()
     args = parser.parse_args()
     
@@ -862,13 +1346,6 @@ def main():
         return 0 if cmd_stats(args) else 1
     elif args.command == "version":
         return 0 if cmd_version(args) else 1
-    else:
-        parser.print_help()
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())
     else:
         parser.print_help()
         return 1

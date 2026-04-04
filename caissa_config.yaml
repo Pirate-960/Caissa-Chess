@@ -1,0 +1,389 @@
+# ==============================================================================
+# CAISSA CHESS ENGINE - Master Configuration File
+# ==============================================================================
+#
+# This file controls ALL configurable parameters across the entire system.
+# Copy this file to `caissa_config.local.yaml` for personal overrides.
+#
+# Environment variables (from .env) override values in this file.
+# CLI arguments override both config file and environment variables.
+#
+# Priority: CLI args > Environment vars (.env) > caissa_config.local.yaml > caissa_config.yaml
+#
+# Sections:
+#   1. LLM Provider        - Which AI model to use and how
+#   2. Stockfish Engine     - Chess engine analysis settings
+#   3. Generation           - Game generation parameters
+#   4. Style & Aesthetics   - Playing style and beauty evaluation
+#   5. Prompt Engineering   - How to instruct the LLM
+#   6. Export & Output      - File formats and output paths
+#   7. Benchmarking         - Performance measurement settings
+#   8. Logging              - Log levels, files, and verbosity
+#   9. Advanced             - Retry logic, caching, and internals
+# ==============================================================================
+
+
+# ==============================================================================
+# 1. LLM PROVIDER CONFIGURATION
+# ==============================================================================
+# Controls which Large Language Model generates the chess games.
+
+llm:
+  # Which provider to use: openai | anthropic | gemini | deepseek | ollama
+  provider: "gemini"
+
+  # --- API Keys ---
+  # Prefer setting these in a .env file for security. 
+  # If set here, they will be used as fallback.
+  openai_api_key: null        # e.g. "sk-proj-..."
+  anthropic_api_key: null     # e.g. "sk-ant-..."
+  google_api_key: null        # e.g. "AIza..."
+  deepseek_api_key: null      # e.g. "sk-..."
+
+  # --- Model Selection ---
+  # Each provider has a default model. Override per-provider here.
+  openai_model: "gpt-4o"
+  anthropic_model: "claude-3-5-sonnet-20241022"
+  gemini_model: "gemini-2.5-pro"
+  deepseek_model: "deepseek-chat"
+  ollama_model: "llama2"
+
+  # --- Generation Parameters ---
+  # These control the LLM's response behavior.
+  temperature: 0.8            # 0.0 = deterministic, 1.0 = very creative (0.0–1.0)
+  max_tokens: 4096            # Maximum tokens in LLM response
+  top_p: 1.0                  # Nucleus sampling threshold (0.0–1.0)
+
+  # --- Ollama-specific ---
+  ollama_base_url: "http://localhost:11434"
+
+  # --- Azure OpenAI (if using Azure) ---
+  azure_endpoint: null        # e.g. "https://myresource.openai.azure.com/"
+  azure_deployment: null      # e.g. "gpt-4-deployment"
+  azure_api_version: "2024-02-01"
+
+
+# ==============================================================================
+# 2. STOCKFISH ENGINE CONFIGURATION
+# ==============================================================================
+# Controls the Stockfish chess engine used for move validation and analysis.
+
+stockfish:
+  # Path to Stockfish binary. Relative paths are resolved from project root.
+  # Set to null to auto-detect from system PATH.
+  path: "engines/stockfish-windows-x86-64-avx2.exe"
+
+  # Analysis depth (higher = stronger but slower). Range: 1–30
+  depth: 15
+
+  # Number of CPU threads for Stockfish. Range: 1–(your CPU cores)
+  threads: 1
+
+  # Hash table size in megabytes. Range: 16–4096
+  hash_mb: 64
+
+  # Time limit per analysis in seconds. Range: 0.01–10.0
+  time_limit: 0.1
+
+  # Blunder detection threshold in centipawns.
+  # A move losing more than this is flagged as a blunder. Range: 50–500
+  blunder_threshold: 300
+
+  # Safety margin for sacrifice detection in centipawns.
+  # Material loss within this margin + positive eval = sacrifice. Range: 50–300
+  sacrifice_margin: 100
+
+  # Enable/disable Stockfish entirely. If false, runs in heuristic-only mode.
+  enabled: true
+
+
+# ==============================================================================
+# 3. GAME GENERATION CONFIGURATION
+# ==============================================================================
+# Controls the core game generation pipeline.
+
+generation:
+  # --- Style Preset ---
+  # Base playing style: tal | capablanca | morphy | coffee_house | neural | karpov
+  style: "tal"
+
+  # --- Theme ---
+  # Optional thematic concept to guide the game. Set to null for no theme.
+  # Choices: queen_sacrifice | rook_sacrifice | windmill | minority_attack |
+  #          pawn_storm | quiet_killer | perpetual_check | stalemate_trap |
+  #          back_rank | fianchetto
+  theme: null
+
+  # --- Era ---
+  # Historical chess era influencing the style of play.
+  # Choices: romantic | classical | hypermodern | soviet | computer | neural
+  era: "romantic"
+
+  # --- Aggression ---
+  # How aggressive/risky the play should be. Range: 1–10
+  # 1 = ultra-safe positional play, 10 = kamikaze attacking
+  aggression: 7
+
+  # --- Chaos ---
+  # How surprising/unpredictable the moves should be. Range: 1–10
+  # 1 = textbook moves, 10 = engine-confusing creativity
+  chaos: 5
+
+  # --- Game Length ---
+  # Target number of half-moves (plies) in the generated game. Range: 10–200
+  depth: 40
+
+  # --- Player Names ---
+  white_player: "Caissa White"
+  black_player: "Caissa Black"
+
+  # --- Prompt Bias ---
+  # Controls the game result / outcome bias.
+  #   white   – Force White to win (1-0).
+  #   black   – Force Black to win (0-1).
+  #   draw    – Force a draw (1/2-1/2).
+  #   random  – Randomly assign 1-0, 0-1, or 1/2-1/2 each game.
+  #   neutral – Let the LLM choose the most dramatically satisfying result.
+  # Choices: white | black | draw | random | neutral
+  bias: "neutral"
+
+  # --- Blunder Tolerance ---
+  # Maximum centipawn loss before a move is rejected. Range: 0.5–5.0
+  blunder_tolerance: 1.5
+
+  # --- Advanced: Difficulty Level ---
+  # Target difficulty of the generated game.
+  # Choices: beginner | intermediate | advanced | master | grandmaster
+  difficulty: "intermediate"
+
+  # --- Advanced: Narrative Arc ---
+  # Story structure for the game. null = auto-select.
+  # Choices: blitzkrieg | comeback | slow_squeeze | mutual_destruction |
+  #          perfect_technique | brilliancy | endgame_magic
+  narrative_arc: null
+
+  # --- Advanced: Beauty Target ---
+  # Target aesthetic score for the generated game. Range: 0–100
+  target_beauty_score: 70.0
+
+  # --- Annotations ---
+  include_annotations: true
+  include_commentary: false
+
+
+# ==============================================================================
+# 4. STYLE & AESTHETICS CONFIGURATION
+# ==============================================================================
+# Fine-tune the beauty evaluation and style system.
+
+aesthetics:
+  # --- Beauty Evaluation Weights ---
+  # These constants control the beauty score formula.
+  # Beauty = (Sacrifices * sacrifice_bonus) + (Tension * tension_mult) + ...
+  sacrifice_bonus: 15.0
+  quiet_killer_bonus: 20.0
+  forcing_move_bonus: 5.0
+  tension_multiplier: 0.5
+  draw_penalty: 5.0
+
+  # --- Advanced Pattern Bonuses ---
+  zwischenzug_bonus: 18.0
+  queen_sacrifice_bonus: 35.0
+  king_hunt_bonus: 22.0
+  windmill_bonus: 30.0
+  smothered_mate_bonus: 25.0
+  exchange_sacrifice_bonus: 12.0
+  prophylaxis_bonus: 10.0
+  defensive_resource_bonus: 14.0
+  pawn_breakthrough_bonus: 16.0
+  mysterious_rook_bonus: 8.0
+
+  # --- Evaluation Mode ---
+  # "hybrid" uses Stockfish + heuristics, "heuristic" uses heuristics only.
+  evaluation_mode: "hybrid"
+
+  # --- Style Blending ---
+  # Enable blending multiple player styles together.
+  enable_style_blending: false
+
+  # Blend weights when enabled (style_name: weight). Must sum to 1.0.
+  blend_styles: {}
+  # Example:
+  # blend_styles:
+  #   tal: 0.6
+  #   capablanca: 0.4
+
+
+# ==============================================================================
+# 5. PROMPT ENGINEERING CONFIGURATION
+# ==============================================================================
+# Controls how prompts are constructed for the LLM.
+
+prompts:
+  # --- Historical Player Personalities ---
+  # When generating as a specific player, use their personality profile.
+  enable_personalities: true
+
+  # --- Multi-Stage Generation ---
+  # Generate the game in stages (concept -> opening -> development -> conclusion).
+  # More sophisticated but slower and costs more tokens.
+  multi_stage: false
+
+  # --- Commentary Style ---
+  # Style of annotations when commentary is enabled.
+  # Choices: analytical | entertaining | educational | tournament
+  commentary_style: "analytical"
+
+  # --- Commentary Depth ---
+  # How detailed the commentary should be.
+  # Choices: brief | moderate | detailed | exhaustive
+  commentary_depth: "moderate"
+
+  # --- Opening Book ---
+  # Use the built-in opening book for the first N moves.
+  use_opening_book: false
+  opening_book_depth: 6    # Number of half-moves from the book
+
+  # --- Custom Constraints ---
+  # List of additional text constraints injected into the prompt.
+  custom_constraints: []
+  # Example:
+  # custom_constraints:
+  #   - "The game must feature an exchange sacrifice before move 20"
+  #   - "White must castle queenside"
+
+
+# ==============================================================================
+# 6. EXPORT & OUTPUT CONFIGURATION
+# ==============================================================================
+# Controls output formats and file paths.
+
+export:
+  # --- Default Output Format ---
+  # Choices: pgn | markdown | html | json
+  format: "pgn"
+
+  # --- Output Path ---
+  # Default output file for generated games.
+  output_path: "game.pgn"
+
+  # --- Batch Output ---
+  batch_output_dir: "./games"
+  batch_filename_pattern: "game_{n:03d}.pgn"
+
+  # --- PGN Formatting ---
+  pretty_pgn: true            # Nicely formatted PGN with indentation
+  max_line_width: 80          # Maximum PGN line width before wrapping
+  include_headers: true       # Include PGN header tags
+
+  # --- Annotation Format ---
+  # NAG symbols: use traditional chess symbols (!! ? !? etc.)
+  use_nag_symbols: true
+
+  # --- Visualization ---
+  enable_visualization: true
+
+
+# ==============================================================================
+# 7. BENCHMARKING CONFIGURATION
+# ==============================================================================
+# Controls the provider benchmarking and quality analysis system.
+
+benchmarks:
+  # --- Default Runs ---
+  # Number of iterations per provider when benchmarking.
+  default_runs: 5
+
+  # --- Quality Analysis Weights ---
+  # How much each dimension contributes to the overall quality score.
+  # Must sum to 1.0.
+  quality_weights:
+    legality: 0.30
+    tactical: 0.25
+    aesthetic: 0.25
+    structural: 0.20
+
+  # --- History ---
+  # Persist benchmark results for trend analysis.
+  save_history: true
+  history_file: "benchmarks/history.json"
+
+  # --- Regression Detection ---
+  # Threshold for flagging performance regressions.
+  regression_threshold: 0.15    # 15% degradation triggers alert
+
+  # --- Report Format ---
+  # Choices: html | markdown | json
+  report_format: "html"
+
+
+# ==============================================================================
+# 8. LOGGING CONFIGURATION
+# ==============================================================================
+# Controls logging across all system modules.
+
+logging:
+  # --- Log Level ---
+  # Choices: DEBUG | INFO | WARNING | ERROR | CRITICAL
+  level: "INFO"
+
+  # --- Log Directory ---
+  # All logs are written to structured subdirectories under this path.
+  # Structure:  logs/master.log, logs/llm/calls.log, logs/generation/generation.log, etc.
+  log_dir: "logs"
+
+  # --- Log Format ---
+  format: "%(asctime)s | %(name)-30s | %(levelname)-8s | %(message)s"
+
+  # --- LLM Prompt/Response Logging ---
+  # Log full LLM prompts and responses to logs/llm/calls.log
+  log_llm_prompts: true
+
+  # --- Log Rotation ---
+  # Maximum size in bytes before any log file is rotated (default 10 MB).
+  max_bytes: 10485760
+  # Number of rotated backup files to keep per log file.
+  backup_count: 3
+
+  # --- Console Logs ---
+  # Show real-time log lines (INFO | …, WARNING | …) in the terminal.
+  # When false, log lines are still written to log files but hidden from
+  # the interactive console.  The pretty [OK] / [INFO] / [ERROR] status
+  # messages from the CLI are always shown regardless of this setting.
+  console_logs: true
+
+  # --- Verbosity ---
+  # Console output verbosity: quiet | normal | verbose | debug
+  # Only takes effect when console_logs is true.
+  verbosity: "normal"
+
+
+# ==============================================================================
+# 9. ADVANCED CONFIGURATION
+# ==============================================================================
+# Internal tuning parameters. Change these only if you know what you're doing.
+
+advanced:
+  # --- Retry Configuration ---
+  retry:
+    # Strategy: immediate | exponential | linear | adaptive
+    strategy: "exponential"
+    max_retries: 3              # Maximum generation attempts before giving up
+    base_delay: 1.0             # Base delay between retries in seconds
+    max_delay: 30.0             # Maximum delay between retries in seconds
+    jitter: 0.1                 # Random jitter factor (0.0–1.0)
+
+  # --- Move Caching ---
+  # Cache evaluated positions to avoid redundant Stockfish calls.
+  enable_move_cache: true
+
+  # --- Parallel Batch Generation ---
+  parallel:
+    enabled: false
+    max_workers: 4              # Maximum parallel generation threads
+    fail_fast: false            # Stop batch on first failure
+
+  # --- Session Statistics ---
+  # Track generation statistics across sessions.
+  track_stats: true
+  stats_file: ".caissa_stats.json"

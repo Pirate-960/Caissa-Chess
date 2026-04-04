@@ -10,22 +10,17 @@ Unlike traditional engines that optimize for a single metric (strength), CAISSA 
 
 ## 📚 Documentation
 
-### 🚀 Quick References (Root)
 | File | Purpose |
 |------|---------|
 | [QUICKSTART.md](QUICKSTART.md) | Get running in 10 minutes |
 | [PROVIDER_QUICK_REFERENCE.md](PROVIDER_QUICK_REFERENCE.md) | One-liner examples for all 6 providers |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System overview |
-| [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) | Current status & what's next |
-
-### 📚 Comprehensive Guides (docs/)
-| File | Purpose |
-|------|---------|
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 | [docs/SETUP.md](docs/SETUP.md) | Complete installation & configuration |
 | [docs/PROVIDERS.md](docs/PROVIDERS.md) | Full provider guide with troubleshooting |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deep technical design |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Contributing & code standards |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Full project vision & timeline |
+| [docs/LLM_VS_LLM.md](docs/LLM_VS_LLM.md) | LLM vs LLM tournament architecture |
 
 ## 🏗️ Architecture Overview
 
@@ -43,52 +38,80 @@ flowchart LR
 
 ```
 Caissa-Chess/
-├── core/                    # Main generation pipeline
-│   ├── generator.py         # Primary orchestrator
-│   ├── board_state.py       # Chess board wrapper
-│   ├── llm_provider.py      # Multi-provider LLM abstraction + metrics
-│   └── prompt_manager.py    # Dynamic prompt assembly
+├── main.py                      # Unified interactive CLI entry point
+├── caissa.py                    # Legacy CLI interface
+├── config_manager.py            # YAML configuration loader & dataclasses
+├── log_manager.py               # Structured logging infrastructure
+├── caissa_config.yaml           # User-facing configuration file
+├── conftest.py                  # Pytest fixtures & shared test config
 │
-├── engine/                  # Validation & analysis
-│   ├── stockfish_client.py  # UCI protocol wrapper
-│   ├── legality.py          # Move validation
-│   └── tac_search.py        # Tactical pattern detection
+├── core/                        # Main generation pipeline
+│   ├── generator.py             # Primary orchestrator
+│   ├── batch_engine.py          # Advanced batch generation engine
+│   ├── board_state.py           # Chess board wrapper
+│   ├── llm_provider.py          # Multi-provider LLM abstraction + metrics
+│   ├── prompt_manager.py        # Dynamic prompt assembly (5-mode bias)
+│   ├── model_discovery.py       # 3-tier Gemini model discovery
+│   └── provider_factory.py      # Provider instantiation factory
 │
-├── aesthetic/               # Beauty evaluation
-│   ├── beauty_eval.py       # Brilliance scoring algorithm
-│   ├── style_slider.py      # Style presets (Tal, Capablanca, etc)
-│   └── sacrifice_detector.py
+├── engine/                      # Validation & analysis
+│   ├── stockfish_client.py      # UCI protocol wrapper
+│   └── legality.py              # Move validation
 │
-├── benchmarks/              # Performance & quality analysis
+├── aesthetic/                   # Beauty evaluation
+│   ├── beauty_eval.py           # Brilliance scoring algorithm
+│   └── style_slider.py          # Style presets (Tal, Capablanca, etc)
+│
+├── benchmarks/                  # Performance & quality analysis
 │   ├── provider_benchmark.py    # Multi-provider benchmarking
 │   ├── rich_console.py          # Color output & charts
 │   ├── quality_analyzer.py      # Game quality scoring
 │   ├── benchmark_history.py     # Trend analysis & persistence
 │   └── report_generator.py      # HTML/Markdown reports
 │
-├── export/                  # Output formatting
-│   ├── pgn_builder.py       # PGN formatting
-│   ├── gif_generator.py     # Board visualization
-│   └── markdown_report.py   # Game narrative
+├── export/                      # Output formatting
+│   ├── game_exporter.py         # Unified export pipeline (PGN/HTML/MD/JSON)
+│   ├── pgn_builder.py           # PGN formatting & NAG annotations
+│   └── annotation_parser.py     # Annotation parsing utilities
 │
-├── data/                    # Reference data
-│   ├── openings.json        # ECO codes
-│   └── master_styles/       # Few-shot examples
+├── data/                        # Reference data
+│   └── openings.json            # ECO codes & opening book
 │
-├── tests/                   # Test suite (264 tests)
-└── README.md
+├── tests/                       # Test suite (933 tests)
+│   ├── 25 test modules covering all subsystems
+│   └── conftest.py
+│
+├── scripts/                     # Utility scripts
+│   ├── list_gemini_models.py
+│   └── list_gemini_models_verbose.py
+│
+├── tal_games/                   # Reference GM game collection
+│   └── game_001–005.pgn
+│
+└── docs/                        # Comprehensive documentation
+    ├── ARCHITECTURE.md
+    ├── DEVELOPMENT.md
+    ├── PROVIDERS.md
+    ├── ROADMAP.md
+    ├── SETUP.md
+    └── LLM_VS_LLM.md
 ```
 
 ## ✨ Features
 
-- **🌐 Multi-Provider Support**: Use OpenAI, Anthropic (Claude), Azure OpenAI, Google Gemini, or run 100% FREE & PRIVATE with local models via Ollama
-- **🎨 LLM-Powered Generation**: Uses advanced AI to propose creative, high-entropy moves
+- **🌐 Multi-Provider Support**: OpenAI, Anthropic (Claude), Azure OpenAI, Google Gemini, or 100% FREE & PRIVATE local models via Ollama
+- **🎨 LLM-Powered Generation**: Advanced AI proposes creative, high-entropy moves with narrative intent
 - **✅ Legality Enforcement**: Every move validated through `python-chess`
-- **🔄 Self-Correction Loop**: Automatically detects and fixes illegal moves with retry logic
-- **💎 Beauty Metrics**: Mathematical scoring of aesthetic qualities
-- **🎭 Style Injection**: Generate games in historical styles (Romantic, Hypermodern, Neural)
-- **📝 GM Commentary**: Auto-annotation explaining brilliant and curious moves
-- **📦 PGN Export**: Professional publication-ready format
+- **🔄 Self-Correction Loop**: Automatic illegal-move detection with configurable retry strategies
+- **💎 Beauty Metrics**: Mathematical scoring of aesthetic qualities (sacrifices, tension, quiet brilliance)
+- **🎭 Style Injection**: 15 historical player personalities (Tal, Capablanca, Fischer, Kasparov, AlphaZero, etc.)
+- **🎯 5-Mode Bias System**: White / Black / Draw / Random / Neutral — let the LLM choose or force an outcome
+- **📦 Multi-Format Export**: PGN, HTML, Markdown, JSON with FEN position headers
+- **🔄 Batch Generation**: Generate multiple games with animated chess-piece spinner and progress bar
+- **📊 Provider Benchmarking**: Rich console output, trend analysis, regression detection
+- **🔍 Model Discovery**: Automatic 3-tier Gemini model enumeration (SDK / REST / hardcoded)
+- **📝 Structured Logging**: Configurable console + file logging with rotation
+- **⚙️ YAML Configuration**: Single `caissa_config.yaml` for all settings
 
 ## 🚀 Quick Start
 
@@ -98,36 +121,55 @@ poetry install
 
 # Set up your preferred provider (choose one):
 export OPENAI_API_KEY='sk-...'              # For OpenAI (GPT-4)
-export ANTHROPIC_API_KEY='sk-ant-...'      # For Anthropic (Claude)
-# OR use Ollama for FREE local models (see MULTI_PROVIDER_GUIDE.md)
+export ANTHROPIC_API_KEY='sk-ant-...'       # For Anthropic (Claude)
+export GOOGLE_API_KEY='...'                 # For Google Gemini
+# OR use Ollama for FREE local models (no key needed)
 
-# Run the demo script
+# Launch the interactive CLI
+python main.py
+
+# Or run a quick demo
 python script_multi_provider_demo.py
-
-# Or generate programmatically:
-from core.llm_provider import OpenAIProvider  # or AnthropicProvider, OllamaProvider
-from core.generator import GameGenerator
-from core.prompt_manager import PromptManager
-
-provider = OpenAIProvider(model="gpt-4")
-prompt_manager = PromptManager()
-generator = GameGenerator(provider, prompt_manager)
-
-game = generator.generate_game(
-    aesthetic_goal="Romantic attacking chess with sacrifices",
-    move_limit=15
-)
-
-print(game.pgn_str)
 ```
 
-**💡 See [PROVIDERS.md](docs/PROVIDERS.md) for detailed setup of all 6 LLM providers!**
+### CLI Usage
+
+```bash
+# Interactive mode (guided prompts)
+python main.py
+
+# Single game generation
+python main.py --provider gemini --bias neutral --moves 30
+
+# Batch generation (10 games)
+python main.py --batch 10 --provider openai --bias random
+
+# Preview prompts without calling the LLM
+python script_preview_prompts.py --bias white black neutral
+```
+
+### Configuration
+
+Edit `caissa_config.yaml` to set defaults:
+```yaml
+generation:
+  provider: "gemini"
+  model: "gemini-2.0-flash"
+  bias: "neutral"           # white | black | draw | random | neutral
+  moves: 30
+  temperature: 0.8
+
+logging:
+  console_logs: true
+  file_logs: true
+  log_level: "INFO"
+```
+
+**See [docs/PROVIDERS.md](docs/PROVIDERS.md) for detailed setup of all 6 LLM providers.**
 
 ## 💎 The Beauty Score Formula
 
 $$\text{Beauty} = (\text{Sacrifices} \times 3) + (\text{Tension} \times 2) + (\text{Quiet Moves} \times 4) - (\text{Draws} \times 5)$$
-
-See `docs/beauty_metric.md` for the full mathematical framework.
 
 ## 🎛️ Style Presets
 
@@ -138,9 +180,7 @@ See `docs/beauty_metric.md` for the full mathematical framework.
 | **Coffee House** | Very Low | Very High | Gambits and tricks |
 | **Neural** | Max | Zero | AlphaZero-style sacrifices |
 
-### 🎭 Historical Player Personalities (Phase 3.1)
-
-Generate games in the style of legendary chess masters:
+### 🎭 Historical Player Personalities
 
 | Player | Era | Style | Aggression |
 |--------|-----|-------|------------|
@@ -152,48 +192,18 @@ Generate games in the style of legendary chess masters:
 | **Carlsen** | Neural | Universal style, grinding technique | 5/10 |
 | **AlphaZero** | Neural | Alien logic, long-term sacrifices | 6/10 |
 
-## 🚀 Phase 3.1 Features
+## 🎯 Bias System
 
-### Batch Generation
-```python
-from core.generator import CaissaGenerator, RetryConfig, RetryStrategy
+| Mode | Result | Description |
+|------|--------|-------------|
+| **white** | `1-0` | Force White to win |
+| **black** | `0-1` | Force Black to win |
+| **draw** | `1/2-1/2` | Force a draw |
+| **random** | Random | Randomly assign 1-0, 0-1, or 1/2-1/2 each game |
+| **neutral** | LLM decides | Let the LLM choose the most dramatically satisfying result |
 
-generator = CaissaGenerator(provider)
-generator.set_retry_config(RetryConfig(
-    strategy=RetryStrategy.EXPONENTIAL,
-    max_retries=5,
-))
+## 📊 Benchmarking & Quality
 
-# Generate multiple games
-batch_result = generator.generate_batch(contexts)
-print(f"Success rate: {batch_result.success_rate:.1%}")
-```
-
-### Multi-Format Export
-```python
-from export.pgn_builder import PGNBuilder, ExportFormat, NAG
-
-builder = PGNBuilder(white="Tal", black="Petrosian")
-builder.add_move_advanced("e4", nags=[NAG.GOOD_MOVE], comment="The king's pawn")
-builder.add_move_advanced("c5")  # Sicilian!
-
-# Export in multiple formats
-print(builder.export(ExportFormat.PGN))
-print(builder.export(ExportFormat.MARKDOWN))
-print(builder.export(ExportFormat.HTML))
-print(builder.export(ExportFormat.JSON))
-```
-
-### Narrative Arcs
-Generate games with story structure:
-- **Blitzkrieg** - Fast, overwhelming attack
-- **The Comeback** - Near-loss turned into victory
-- **The Slow Squeeze** - Gradual positional domination
-- **The Brilliancy** - Single stunning move turns game
-
-## 📊 Phase 3.2+ Benchmarking Features
-
-### Provider Benchmarking
 ```bash
 # Rich console output with colors and charts
 python -m benchmarks.provider_benchmark --all --rich
@@ -201,71 +211,38 @@ python -m benchmarks.provider_benchmark --all --rich
 # Generate HTML report
 python -m benchmarks.provider_benchmark --all --report benchmark.html
 
-# Save to history database for trend analysis
-python -m benchmarks.provider_benchmark --all --save-history
-```
-
-### Quality Analysis
-```python
-from benchmarks.quality_analyzer import QualityAnalyzer
-
-analyzer = QualityAnalyzer()
-report = analyzer.analyze(pgn_string)
-
-print(f"Grade: {report.grade}")  # A+, A, B+, etc.
-print(f"Score: {report.overall_score}/100")
-print(f"Opening: {report.detected_opening}")
-```
-
-### Benchmark History & Trends
-```bash
 # Analyze performance trends over time
 python -m benchmarks.benchmark_history --provider openai --trends
-
-# Detect performance regressions
-python -m benchmarks.benchmark_history --regressions
 ```
 
 ## 📋 Development Roadmap
 
-See [ROADMAP.md](docs/ROADMAP.md) for complete project timeline and vision.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the complete project timeline and vision.
 
-**Current Status**: 
+**Current Status**:
 - ✅ **v0.1**: Core generation pipeline (legality validation)
-- ✅ **v0.2**: Multi-provider LLM support (6 providers, 49 tests passing)
-- ✅ **v0.3**: Stockfish integration complete + Phase 3.1 enhancements
-  - 🎯 Batch generation with progress tracking
-  - 🎭 15 historical player personalities
-  - 📝 NAG annotations & multi-format export (PGN/HTML/MD/JSON)
-  - 🔄 Advanced retry strategies with exponential backoff
-  - 📊 Generation statistics and caching
+- ✅ **v0.2**: Multi-provider LLM support (6 providers)
+- ✅ **v0.3**: Stockfish integration + Phase 3.1 enhancements
+  - Batch generation, 15 player personalities, NAG annotations, multi-format export
 - ✅ **v0.3.1**: Quality & Testing (Phase 3.2)
-  - 📊 Provider metrics tracking (tokens, cost, latency)
-  - 🧪 Live API testing for all providers
-  - 🔬 End-to-end generation tests
+  - Provider metrics (tokens, cost, latency), live API testing
 - ✅ **v0.3.2**: Enhanced Benchmarking (Phase 3.2+)
-  - 🎨 Rich console output with colors and charts
-  - 📈 Benchmark history and trend analysis
-  - 📋 HTML/Markdown report generation
-  - 🔍 Quality analysis for generated games
-  - ⚠️ Regression detection and alerts
-- 📋 **v0.4.0**: Quality & Analysis (Planned)
-  - Auto-annotation system with GM-level commentary
-  - Turing test mode for game evaluation
-  - Game database with search and analytics
-- 📋 **v0.5.0**: Web Interface & API (Planned)
-  - FastAPI backend with PostgreSQL + Redis
-  - Next.js 14 frontend with TypeScript
-  - Real-time WebSocket generation progress
-  - Interactive chessboard with game replay
-  - JWT auth with OAuth2 (GitHub, Google)
-  - Docker + Kubernetes deployment ready
-  - CI/CD with GitHub Actions
+  - Rich console, trend analysis, regression detection, HTML reports
+- ✅ **v0.4.0**: Interactive CLI & Configuration Overhaul
+  - Unified CLI (`main.py`), YAML config, 5-mode bias system, batch engine with animated spinner
+  - FEN/FinalFEN position headers, structured logging, model discovery, provider factory
+  - 933 tests passing across 25 test modules
+- 📋 **v0.5.0**: LLM vs LLM Tournament Mode (Planned)
+  - Move-by-move generation with two LLMs alternating
+  - Tournament brackets and ELO tracking
+  - See [docs/LLM_VS_LLM.md](docs/LLM_VS_LLM.md) for architecture
+- 📋 **v0.6.0**: Web Interface & API (Planned)
+  - FastAPI backend, Next.js frontend, real-time generation
 - 🎯 **v1.0**: Production-ready release
 
 ## 🔬 Research Applications
 
-CAISSA is positioned as "Alignment Research in Game Aesthetics"—exploring how to generate strategic content that entertains *and* instructs humans, not just maximizes ELO.
+CAISSA is positioned as "Alignment Research in Game Aesthetics" — exploring how to generate strategic content that entertains *and* instructs humans, not just maximizes ELO.
 
 Key metrics:
 - **Memorability**: Can humans recall the key position?
@@ -278,7 +255,7 @@ MIT
 
 ---
 
-**Status**: `✅ Stable Release`  
-**Version**: v0.3.2 (Phase 3.2+ Enhanced Benchmarking Complete)  
-**Last Updated**: February 2026  
-**Tests**: 264 passing ✅
+**Status**: `✅ Stable Release`
+**Version**: v0.4.0 (Interactive CLI & Configuration Overhaul)
+**Last Updated**: March 2026
+**Tests**: 933 passing, 13 skipped ✅

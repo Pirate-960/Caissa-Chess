@@ -17,11 +17,18 @@ Original functionality 100% preserved.
 import os
 import logging
 import time
+import threading
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, Tuple
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+
+from log_manager import (
+    get_logger as _get_caissa_logger,
+    is_llm_logging_enabled,
+    SESSION_ID as _session_id,
+)
 
 from openai import OpenAI, AzureOpenAI, RateLimitError, APIConnectionError
 from tenacity import (
@@ -31,8 +38,119 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-# Configure logging
+# Configure logging — handlers are wired by log_manager.setup_logging()
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# LLM CALL LOGGING — routes through log_manager
+# =============================================================================
+
+# Thread-safe call counter so every API call in a session gets a unique ID.
+_call_counter = 0
+_call_lock = threading.Lock()
+
+
+def _next_call_id() -> str:
+    """Return a session-unique call identifier, e.g. ``a1b2c3d4-0001``."""
+    global _call_counter
+    with _call_lock:
+        _call_counter += 1
+        return f"{_session_id}-{_call_counter:04d}"
+
+
+# ── Public helpers used by every provider ────────────────────────────────────
+
+def _log_llm_call(
+    *,
+    provider: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    response: str,
+    temperature: float,
+    max_tokens: int,
+    elapsed_ms: float,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    call_id: str = "",
+) -> None:
+    """Log a **successful** LLM call with full metadata."""
+    if not is_llm_logging_enabled():
+        return
+
+    lg = _get_caissa_logger("llm.calls")
+
+    msg = (
+        f"{'=' * 70}\n"
+        f"  Call ID:       {call_id}\n"
+        f"  Provider:      {provider}\n"
+        f"  Model:         {model}\n"
+        f"  Temperature:   {temperature}\n"
+        f"  Max Tokens:    {max_tokens}\n"
+        f"  Elapsed:       {elapsed_ms:,.0f} ms\n"
+        f"  Tokens (est):  {input_tokens} in / {output_tokens} out"
+        f" / {input_tokens + output_tokens} total\n"
+        f"{'-' * 70}\n"
+        f"  SYSTEM PROMPT\n"
+        f"{'-' * 70}\n"
+        f"{system_prompt}\n"
+        f"{'-' * 70}\n"
+        f"  USER PROMPT\n"
+        f"{'-' * 70}\n"
+        f"{user_prompt}\n"
+        f"{'-' * 70}\n"
+        f"  RESPONSE\n"
+        f"{'-' * 70}\n"
+        f"{response}\n"
+        f"{'=' * 70}"
+    )
+    lg.info(msg)
+
+    # Summary line to module logger → master.log + generation.log
+    logger.info(
+        "LLM call [%s] %s/%s — %.0f ms, ~%d tokens",
+        call_id, provider, model, elapsed_ms, input_tokens + output_tokens,
+    )
+
+
+def _log_llm_error(
+    *,
+    provider: str,
+    model: str,
+    system_prompt: str,
+    user_prompt: str,
+    error: Exception,
+    temperature: float,
+    max_tokens: int,
+    elapsed_ms: float,
+    call_id: str = "",
+    is_retry: bool = False,
+) -> None:
+    """Log a **failed** LLM call (retryable or fatal)."""
+    lg = _get_caissa_logger("llm.errors")
+
+    label = "RETRYABLE ERROR" if is_retry else "FATAL ERROR"
+    msg = (
+        f"{'!' * 70}\n"
+        f"  {label}\n"
+        f"  Call ID:       {call_id}\n"
+        f"  Provider:      {provider}\n"
+        f"  Model:         {model}\n"
+        f"  Temperature:   {temperature}\n"
+        f"  Max Tokens:    {max_tokens}\n"
+        f"  Elapsed:       {elapsed_ms:,.0f} ms\n"
+        f"  Error Type:    {type(error).__name__}\n"
+        f"  Error Message: {error}\n"
+        f"{'!' * 70}"
+    )
+    lg.warning(msg)
+
+    # Summary line to module logger → master.log + generation.log
+    logger.warning(
+        "LLM error [%s] %s/%s — %s: %s",
+        call_id, provider, model, type(error).__name__, error,
+    )
 
 
 # =============================================================================
@@ -195,10 +313,31 @@ MODEL_PRICING: Dict[str, Tuple[float, float]] = {
     "claude-3-sonnet": (3.0, 15.0),
     "claude-3-haiku": (0.25, 1.25),
     "claude-3-5-sonnet": (3.0, 15.0),
-    # Google
-    "gemini-pro": (0.50, 1.50),
-    "gemini-1.5-pro": (3.50, 10.50),
-    "gemini-1.5-flash": (0.075, 0.30),
+    # ===== Google Gemini 3.0 (Latest Flagship - Nov/Dec 2025) =====
+    "gemini-3-pro": (2.00, 12.00),              # $2 (≤200k) / $4 (>200k) input, $12/$18 output
+    "gemini-3-pro-200k": (4.00, 18.00),         # Pricing for >200k context
+    "gemini-3-flash": (0.50, 3.00),             # Fast & capable flagship
+    "gemini-3-deep-think": (2.00, 12.00),       # Deep reasoning (Pro tier pricing)
+    "nano-banana-pro": (2.00, 120.00),          # Image-focused Gemini 3 variant
+    # ===== Google Gemini 2.5 (Production Standard - June/July 2025) =====
+    "gemini-2.5-pro": (1.25, 10.00),            # $1.25 (≤200k) / $2.50 (>200k) input
+    "gemini-2.5-pro-200k": (2.50, 15.00),       # Pricing for >200k context
+    "gemini-2.5-flash": (0.30, 2.50),           # Native audio/video output
+    "gemini-2.5-flash-lite": (0.10, 0.40),      # Best price-to-performance
+    "nano-banana": (0.30, 30.00),               # Gemini 2.5 image variant
+    # ===== Google Gemini 2.0 (Legacy Support - Dec 2024/Feb 2025) =====
+    "gemini-2.0-pro": (1.25, 10.00),            # Legacy production
+    "gemini-2.0-flash": (0.15, 0.60),           # Standard default (legacy)
+    "gemini-2.0-flash-lite": (0.075, 0.30),     # High-volume automation
+    # ===== Google Gemini 1.5 (Context Revolution - Feb/May 2024) =====
+    "gemini-1.5-pro": (1.25, 5.00),             # Deprecated, limited access
+    "gemini-1.5-pro-latest": (1.25, 5.00),
+    "gemini-1.5-flash": (0.075, 0.30),          # Replaced by 2.x/3.x Flash
+    "gemini-1.5-flash-latest": (0.075, 0.30),
+    "gemini-1.5-flash-8b": (0.0375, 0.15),      # Smallest API model
+    # ===== Google Gemini 1.0 (Discontinued - Dec 2023) =====
+    "gemini-pro": (0.50, 1.50),                 # Discontinued
+    "gemini-1.0-pro": (0.50, 1.50),             # Discontinued
     # Local
     "ollama": (0.0, 0.0),
     "llama2": (0.0, 0.0),
@@ -362,7 +501,8 @@ class OpenAIProvider(LLMProvider):
         api_key: Optional[str] = None,
         model: str = "gpt-4-turbo",
         max_tokens: int = 4096,
-        track_metrics: bool = False
+        track_metrics: bool = False,
+        base_url: Optional[str] = None
     ):
         """
         Initialize OpenAI provider.
@@ -372,6 +512,7 @@ class OpenAIProvider(LLMProvider):
             model: Model to use (default: gpt-4-turbo)
             max_tokens: Maximum tokens to generate
             track_metrics: Enable metrics tracking (Phase 3.2)
+            base_url: Optional custom API base URL (e.g. for DeepSeek)
         """
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
@@ -380,7 +521,10 @@ class OpenAIProvider(LLMProvider):
                 "or pass api_key to constructor."
             )
         
-        self.client = OpenAI(api_key=self.api_key)
+        client_kwargs = {"api_key": self.api_key}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        self.client = OpenAI(**client_kwargs)
         self.model = model
         self.max_tokens = max_tokens
         
@@ -423,29 +567,73 @@ class OpenAIProvider(LLMProvider):
             Exception: For other API errors
         """
         logger.debug(f"Generating with temperature={temperature}")
-        
+        call_id = _next_call_id()
+        start = time.perf_counter()
+
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
+                max_tokens=self.max_tokens,
+                temperature=temperature,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
-                ],
-                temperature=temperature,
-                max_tokens=self.max_tokens
+                ]
             )
-            
+
             content = response.choices[0].message.content
-            logger.debug(f"Generated {len(content)} characters")
-            
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            in_tok = estimate_tokens(system_prompt + user_prompt)
+            out_tok = estimate_tokens(content)
+            logger.debug(f"Generated {len(content)} characters in {elapsed_ms:.0f}ms")
+
+            _log_llm_call(
+                provider=self.__class__.__name__,
+                model=self.model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response=content,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                input_tokens=in_tok,
+                output_tokens=out_tok,
+                call_id=call_id,
+            )
+
             return content
-        
+
         except (RateLimitError, APIConnectionError) as e:
+            elapsed_ms = (time.perf_counter() - start) * 1000
             logger.warning(f"Retryable error: {type(e).__name__}: {str(e)}")
+            _log_llm_error(
+                provider=self.__class__.__name__,
+                model=self.model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                error=e,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                call_id=call_id,
+                is_retry=True,
+            )
             raise  # Will be caught by tenacity retry
-        
+
         except Exception as e:
+            elapsed_ms = (time.perf_counter() - start) * 1000
             logger.error(f"OpenAI API error: {type(e).__name__}: {str(e)}")
+            _log_llm_error(
+                provider=self.__class__.__name__,
+                model=self.model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                error=e,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                call_id=call_id,
+            )
             raise
 
 
@@ -582,7 +770,9 @@ class AnthropicProvider(LLMProvider):
             Generated text response
         """
         logger.debug(f"Generating with temperature={temperature}")
-        
+        call_id = _next_call_id()
+        start = time.perf_counter()
+
         try:
             response = self.client.messages.create(
                 model=self.model,
@@ -593,14 +783,44 @@ class AnthropicProvider(LLMProvider):
                     {"role": "user", "content": user_prompt}
                 ]
             )
-            
+
             content = response.content[0].text
-            logger.debug(f"Generated {len(content)} characters")
-            
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            in_tok = estimate_tokens(system_prompt + user_prompt)
+            out_tok = estimate_tokens(content)
+            logger.debug(f"Generated {len(content)} characters in {elapsed_ms:.0f}ms")
+
+            _log_llm_call(
+                provider=self.__class__.__name__,
+                model=self.model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response=content,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                input_tokens=in_tok,
+                output_tokens=out_tok,
+                call_id=call_id,
+            )
+
             return content
-        
+
         except Exception as e:
+            elapsed_ms = (time.perf_counter() - start) * 1000
             logger.error(f"Anthropic API error: {type(e).__name__}: {str(e)}")
+            _log_llm_error(
+                provider=self.__class__.__name__,
+                model=self.model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                error=e,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                call_id=call_id,
+                is_retry=True,
+            )
             raise
 
 
@@ -681,7 +901,9 @@ class AzureOpenAIProvider(LLMProvider):
             Generated text response
         """
         logger.debug(f"Generating with temperature={temperature}")
-        
+        call_id = _next_call_id()
+        start = time.perf_counter()
+
         try:
             response = self.client.chat.completions.create(
                 model=self.deployment_name,
@@ -692,18 +914,60 @@ class AzureOpenAIProvider(LLMProvider):
                 temperature=temperature,
                 max_tokens=self.max_tokens
             )
-            
+
             content = response.choices[0].message.content
-            logger.debug(f"Generated {len(content)} characters")
-            
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            in_tok = estimate_tokens(system_prompt + user_prompt)
+            out_tok = estimate_tokens(content)
+            logger.debug(f"Generated {len(content)} characters in {elapsed_ms:.0f}ms")
+
+            _log_llm_call(
+                provider=self.__class__.__name__,
+                model=self.deployment_name,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response=content,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                input_tokens=in_tok,
+                output_tokens=out_tok,
+                call_id=call_id,
+            )
+
             return content
-        
+
         except (RateLimitError, APIConnectionError) as e:
+            elapsed_ms = (time.perf_counter() - start) * 1000
             logger.warning(f"Retryable error: {type(e).__name__}: {str(e)}")
+            _log_llm_error(
+                provider=self.__class__.__name__,
+                model=self.deployment_name,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                error=e,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                call_id=call_id,
+                is_retry=True,
+            )
             raise
-        
+
         except Exception as e:
+            elapsed_ms = (time.perf_counter() - start) * 1000
             logger.error(f"Azure OpenAI API error: {type(e).__name__}: {str(e)}")
+            _log_llm_error(
+                provider=self.__class__.__name__,
+                model=self.deployment_name,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                error=e,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                call_id=call_id,
+            )
             raise
 
 
@@ -714,22 +978,80 @@ class GoogleGeminiProvider(LLMProvider):
     Features:
     - Exponential backoff for rate limits
     - Automatic retry on network errors
-    - Configurable model selection (Gemini Pro, etc.)
+    - Configurable model selection
+    - Support for Gemini 3.0, 2.5, 2.0, 1.5, and 1.0 series
+    
+    Supported Models (Feb 2026):
+    
+    GEMINI 3.0 (Flagship - Nov/Dec 2025):
+    - gemini-3-flash (RECOMMENDED) - Best value, 1M context
+    - gemini-3-pro - Premium quality, 1-2M context
+    - gemini-3-deep-think - Advanced reasoning capabilities
+    - nano-banana-pro - Image-focused variant (64k context)
+    
+    GEMINI 2.5 (Production Standard - June/July 2025):
+    - gemini-2.5-flash - Native audio/video output
+    - gemini-2.5-flash-lite - Cheapest price-to-perf ratio
+    - gemini-2.5-pro - High multimodal reasoning
+    - nano-banana - Gemini 2.5 image variant
+    
+    GEMINI 2.0 (Legacy - Dec 2024/Feb 2025):
+    - gemini-2.0-flash - First speed breakthrough
+    - gemini-2.0-flash-lite - High-volume automation
+    - gemini-2.0-pro - Legacy production
+    
+    GEMINI 1.5/1.0 (Deprecated):
+    - gemini-1.5-pro/flash - Limited access
+    - gemini-1.0-pro - Discontinued
     """
+    
+    SUPPORTED_MODELS = [
+        # Gemini 3.0 (Latest Flagship)
+        "gemini-3-flash",
+        "gemini-3-pro",
+        "gemini-3-pro-200k",
+        "gemini-3-deep-think",
+        "nano-banana-pro",
+        # Gemini 2.5 (Production Standard)
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-pro",
+        "gemini-2.5-pro-200k",
+        "nano-banana",
+        # Gemini 2.0 (Legacy Support)
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-2.0-pro",
+        # Gemini 1.5 (Deprecated)
+        "gemini-1.5-pro",
+        "gemini-1.5-pro-latest",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-8b",
+        # Gemini 1.0 (Discontinued)
+        "gemini-pro",
+        "gemini-1.0-pro",
+    ]
 
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-pro",
-        max_tokens: int = 4096
+        model: str = "gemini-3-flash",
+        max_tokens: int = 8192
     ):
         """
         Initialize Google Gemini provider.
         
         Args:
             api_key: Google API key (if None, reads from GOOGLE_API_KEY)
-            model: Model to use (default: gemini-pro)
-            max_tokens: Maximum tokens to generate
+            model: Model to use (default: gemini-3-flash)
+            max_tokens: Maximum tokens to generate (default: 8192)
+        
+        Recommended models by use case:
+            - gemini-3-flash: Best value, fast & capable (RECOMMENDED)
+            - gemini-3-pro: Premium quality, complex reasoning
+            - gemini-3-deep-think: Advanced reasoning tasks
+            - gemini-2.5-flash-lite: Budget-friendly, high volume
         """
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
@@ -737,20 +1059,74 @@ class GoogleGeminiProvider(LLMProvider):
                 "Google API key not provided. Set GOOGLE_API_KEY environment variable "
                 "or pass api_key to constructor."
             )
-        
+
+        self._use_new_sdk = False
+        self._use_old_sdk = False
+        self._use_rest = False
+        self._genai_client = None
+        self.client = None  # old SDK GenerativeModel
+
+        # ── Tier 1: Try the new google-genai SDK ────────────────
         try:
-            import google.generativeai as genai
-            genai.configure(api_key=self.api_key)
-            self.client = genai.GenerativeModel(model)
+            from google import genai  # noqa: F401
+            self._genai_client = genai.Client(api_key=self.api_key)
+            self._use_new_sdk = True
+            logger.info("Gemini tier-1: using google-genai (new SDK)")
         except ImportError:
-            raise ImportError(
-                "google-generativeai package required. Install with: pip install google-generativeai"
+            logger.info(
+                "google-genai SDK not installed. "
+                "Install with: pip install google-genai   "
+                "Falling back to google-generativeai..."
             )
-        
+
+        # ── Tier 2: Fall back to deprecated google-generativeai ─
+        if not self._use_new_sdk:
+            try:
+                import google.generativeai as genai_old
+                genai_old.configure(api_key=self.api_key)
+                self.client = genai_old.GenerativeModel(model)
+                self._use_old_sdk = True
+                logger.info("Gemini tier-2: using google-generativeai (deprecated SDK)")
+            except ImportError:
+                logger.info(
+                    "google-generativeai SDK not installed either. "
+                    "Install with: pip install google-generativeai   "
+                    "Falling back to REST API..."
+                )
+
+        # ── Tier 3: REST API fallback (no SDK required) ─────────
+        if not self._use_new_sdk and not self._use_old_sdk:
+            try:
+                import requests as _req  # noqa: F401
+                self._use_rest = True
+                self._rest_base = (
+                    "https://generativelanguage.googleapis.com/v1beta/models"
+                )
+                logger.info(
+                    "Gemini tier-3: using REST API (no SDK). "
+                    "For a richer experience install: pip install google-genai"
+                )
+            except ImportError:
+                raise ImportError(
+                    "No Gemini SDK and no 'requests' library installed. "
+                    "Install at least one:\n"
+                    "  pip install google-genai          (recommended)\n"
+                    "  pip install google-generativeai   (deprecated)\n"
+                    "  pip install requests              (REST fallback)"
+                )
+
         self.model = model
         self.max_tokens = max_tokens
         
-        logger.info(f"Initialized GoogleGeminiProvider with model: {model}")
+        tier_label = (
+            "new SDK (google.genai)" if self._use_new_sdk
+            else "deprecated SDK (google.generativeai)" if self._use_old_sdk
+            else "REST API"
+        )
+        logger.info(
+            f"Initialized GoogleGeminiProvider with model: {model} "
+            f"[backend: {tier_label}]"
+        )
 
     @retry(
         retry=retry_if_exception_type(Exception),
@@ -776,26 +1152,111 @@ class GoogleGeminiProvider(LLMProvider):
             Generated text response
         """
         logger.debug(f"Generating with temperature={temperature}")
-        
+        call_id = _next_call_id()
+        start = time.perf_counter()
+
         try:
-            # Gemini combines system and user prompts
-            full_prompt = f"{system_prompt}\n\n{user_prompt}"
-            
-            response = self.client.generate_content(
-                full_prompt,
-                generation_config={
-                    "temperature": temperature,
-                    "max_output_tokens": self.max_tokens
+            if self._use_new_sdk:
+                # ── Tier 1: New google-genai SDK ─────────────────
+                from google.genai import types as genai_types
+
+                response = self._genai_client.models.generate_content(
+                    model=self.model,
+                    contents=user_prompt,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        temperature=temperature,
+                        max_output_tokens=self.max_tokens,
+                    ),
+                )
+                content = response.text
+
+            elif self._use_old_sdk:
+                # ── Tier 2: Deprecated google-generativeai SDK ───
+                full_prompt = f"{system_prompt}\n\n{user_prompt}"
+
+                response = self.client.generate_content(
+                    full_prompt,
+                    generation_config={
+                        "temperature": temperature,
+                        "max_output_tokens": self.max_tokens
+                    }
+                )
+                content = response.text
+
+            else:
+                # ── Tier 3: REST API fallback ────────────────────
+                import requests as _req
+                import json as _json
+
+                url = f"{self._rest_base}/{self.model}:generateContent"
+                payload = {
+                    "contents": [
+                        {"parts": [{"text": f"{system_prompt}\n\n{user_prompt}"}]}
+                    ],
+                    "generationConfig": {
+                        "temperature": temperature,
+                        "maxOutputTokens": self.max_tokens,
+                    },
                 }
+                resp = _req.post(
+                    url,
+                    params={"key": self.api_key},
+                    headers={"Content-Type": "application/json"},
+                    json=payload,
+                    timeout=120,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+
+                # Extract text from REST response
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    raise RuntimeError(
+                        f"Gemini REST API returned no candidates: {_json.dumps(data)[:300]}"
+                    )
+                parts = candidates[0].get("content", {}).get("parts", [])
+                content = "".join(p.get("text", "") for p in parts)
+                if not content:
+                    raise RuntimeError(
+                        f"Gemini REST API returned empty content: {_json.dumps(data)[:300]}"
+                    )
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            in_tok = estimate_tokens(system_prompt) + estimate_tokens(user_prompt)
+            out_tok = estimate_tokens(content)
+            logger.debug(f"Generated {len(content)} characters in {elapsed_ms:.0f}ms")
+
+            _log_llm_call(
+                provider=self.__class__.__name__,
+                model=self.model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response=content,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                input_tokens=in_tok,
+                output_tokens=out_tok,
+                call_id=call_id,
             )
-            
-            content = response.text
-            logger.debug(f"Generated {len(content)} characters")
-            
+
             return content
-        
+
         except Exception as e:
+            elapsed_ms = (time.perf_counter() - start) * 1000
             logger.error(f"Google Gemini API error: {type(e).__name__}: {str(e)}")
+            _log_llm_error(
+                provider=self.__class__.__name__,
+                model=self.model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                error=e,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                call_id=call_id,
+                is_retry=True,
+            )
             raise
 
 
@@ -868,7 +1329,9 @@ class OllamaProvider(LLMProvider):
             Generated text response
         """
         logger.debug(f"Generating with temperature={temperature}")
-        
+        call_id = _next_call_id()
+        start = time.perf_counter()
+
         try:
             response = self.requests.post(
                 f"{self.base_url}/api/generate",
@@ -883,79 +1346,45 @@ class OllamaProvider(LLMProvider):
                 },
                 timeout=300  # 5 minutes for local generation
             )
-            
+
             response.raise_for_status()
             result = response.json()
             content = result.get("response", "")
-            
-            logger.debug(f"Generated {len(content)} characters")
-            
-            return content
-        
-        except Exception as e:
-            logger.error(f"Ollama API error: {type(e).__name__}: {str(e)}")
-            raise
 
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            in_tok = estimate_tokens(system_prompt + user_prompt)
+            out_tok = estimate_tokens(content)
+            logger.debug(f"Generated {len(content)} characters in {elapsed_ms:.0f}ms")
 
-class MockProvider(LLMProvider):
-    """
-    Mock provider for testing without API calls.
-    
-    Returns pre-defined responses in sequence, allowing controlled
-    testing of the self-correction loop and error handling.
-    """
-
-    def __init__(self, responses: list[str]):
-        """
-        Initialize mock provider.
-        
-        Args:
-            responses: List of responses to return sequentially
-        """
-        if not responses:
-            raise ValueError("MockProvider requires at least one response")
-        
-        self.responses = responses
-        self.call_count = 0
-        
-        logger.info(f"Initialized MockProvider with {len(responses)} responses")
-
-    def generate(
-        self, 
-        system_prompt: str, 
-        user_prompt: str, 
-        temperature: float = 0.8
-    ) -> str:
-        """
-        Return the next pre-defined response.
-        
-        Args:
-            system_prompt: Ignored (for testing)
-            user_prompt: Ignored (for testing)
-            temperature: Ignored (for testing)
-        
-        Returns:
-            Next response from the list
-        
-        Raises:
-            IndexError: If all responses have been exhausted
-        """
-        if self.call_count >= len(self.responses):
-            raise IndexError(
-                f"MockProvider exhausted: {self.call_count} calls made, "
-                f"only {len(self.responses)} responses available"
+            _log_llm_call(
+                provider=self.__class__.__name__,
+                model=self.model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response=content,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                input_tokens=in_tok,
+                output_tokens=out_tok,
+                call_id=call_id,
             )
-        
-        response = self.responses[self.call_count]
-        self.call_count += 1
-        
-        logger.debug(
-            f"MockProvider returning response {self.call_count}/{len(self.responses)}"
-        )
-        
-        return response
 
-    def reset(self) -> None:
-        """Reset the call counter."""
-        self.call_count = 0
-        logger.debug("MockProvider reset")
+            return content
+
+        except Exception as e:
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            logger.error(f"Ollama API error: {type(e).__name__}: {str(e)}")
+            _log_llm_error(
+                provider=self.__class__.__name__,
+                model=self.model,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                error=e,
+                temperature=temperature,
+                max_tokens=self.max_tokens,
+                elapsed_ms=elapsed_ms,
+                call_id=call_id,
+                is_retry=True,
+            )
+            raise

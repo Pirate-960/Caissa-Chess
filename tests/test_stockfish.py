@@ -126,8 +126,10 @@ class TestActiveModeAnalysis(unittest.TestCase):
         """Test evaluation of starting position."""
         # Mock engine response: starting position is about equal (+20cp for White)
         mock_score = MagicMock()
-        mock_score.is_mate.return_value = False
-        mock_score.white.return_value = MagicMock(cp=20)
+        white_pov = MagicMock()
+        white_pov.is_mate.return_value = False
+        white_pov.score.return_value = 20
+        mock_score.white.return_value = white_pov
         
         self.mock_engine.analyse.return_value = {
             "score": mock_score,
@@ -150,12 +152,16 @@ class TestActiveModeAnalysis(unittest.TestCase):
         """Test evaluation of a good move."""
         # Mock: before = +20cp, after = +50cp (good for player to move)
         before_score = MagicMock()
-        before_score.is_mate.return_value = False
-        before_score.white.return_value = MagicMock(cp=20)
+        before_white_pov = MagicMock()
+        before_white_pov.is_mate.return_value = False
+        before_white_pov.score.return_value = 20
+        before_score.white.return_value = before_white_pov
         
         after_score = MagicMock()
-        after_score.is_mate.return_value = False
-        after_score.white.return_value = MagicMock(cp=50)
+        after_white_pov = MagicMock()
+        after_white_pov.is_mate.return_value = False
+        after_white_pov.score.return_value = 50
+        after_score.white.return_value = after_white_pov
         
         self.mock_engine.analyse.side_effect = [
             {
@@ -185,12 +191,16 @@ class TestActiveModeAnalysis(unittest.TestCase):
         """Test blunder detection (large eval drop)."""
         # Mock: before = +100cp (good), after = -250cp (disaster)
         before_score = MagicMock()
-        before_score.is_mate.return_value = False
-        before_score.white.return_value = MagicMock(cp=100)
+        before_white_pov = MagicMock()
+        before_white_pov.is_mate.return_value = False
+        before_white_pov.score.return_value = 100
+        before_score.white.return_value = before_white_pov
         
         after_score = MagicMock()
-        after_score.is_mate.return_value = False
-        after_score.white.return_value = MagicMock(cp=-250)
+        after_white_pov = MagicMock()
+        after_white_pov.is_mate.return_value = False
+        after_white_pov.score.return_value = -250
+        after_score.white.return_value = after_white_pov
         
         self.mock_engine.analyse.side_effect = [
             {
@@ -218,8 +228,10 @@ class TestActiveModeAnalysis(unittest.TestCase):
     def test_cache_performance(self):
         """Verify caching works and improves performance."""
         mock_score = MagicMock()
-        mock_score.is_mate.return_value = False
-        mock_score.white.return_value = MagicMock(cp=0)
+        white_pov = MagicMock()
+        white_pov.is_mate.return_value = False
+        white_pov.score.return_value = 0
+        mock_score.white.return_value = white_pov
         
         self.mock_engine.analyse.return_value = {
             "score": mock_score,
@@ -250,8 +262,10 @@ class TestActiveModeAnalysis(unittest.TestCase):
     def test_cache_clear(self):
         """Verify cache can be cleared."""
         mock_score = MagicMock()
-        mock_score.is_mate.return_value = False
-        mock_score.white.return_value = MagicMock(cp=0)
+        white_pov = MagicMock()
+        white_pov.is_mate.return_value = False
+        white_pov.score.return_value = 0
+        mock_score.white.return_value = white_pov
         
         self.mock_engine.analyse.return_value = {
             "score": mock_score,
@@ -300,9 +314,10 @@ class TestStockfishIntegration(unittest.TestCase):
         
         # Mock: Fool's Mate is a loss for White
         mate_score = MagicMock()
-        mate_score.is_mate.return_value = True
-        mate_score.white.return_value = -1  # Negative means Black is winning (comparable int)
-        mate_score.mate.return_value = -1  # Mate in 1 for Black (negative = opponent's mate)
+        white_pov = MagicMock()
+        white_pov.is_mate.return_value = True
+        white_pov.mate.return_value = -1  # Mate in 1 for Black (negative = opponent's mate)
+        mate_score.white.return_value = white_pov
         
         mock_engine.analyse.return_value = {
             "score": mate_score,

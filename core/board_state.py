@@ -17,6 +17,7 @@ Original functionality 100% preserved.
 import chess
 import chess.pgn
 import logging
+from collections import OrderedDict
 from typing import List, Optional, Dict, Tuple, Set
 from dataclasses import dataclass, field
 from enum import Enum
@@ -242,7 +243,8 @@ class BoardState:
         self.board = chess.Board()
         self.move_history: List[MoveMetadata] = []
         # PHASE 3.1: Additional tracking
-        self._position_cache: Dict[str, AdvancedPositionAnalysis] = {}
+        self._position_cache: OrderedDict[str, AdvancedPositionAnalysis] = OrderedDict()
+        self._max_position_cache = 2048
         self._opening_book_loaded = False
 
     # =========================================================================
@@ -255,6 +257,7 @@ class BoardState:
         """
         san = self.board.san(move)
         position_before = self.board.fen()
+        is_capture = self.board.is_capture(move)
         
         self.board.push(move)
         
@@ -265,7 +268,7 @@ class BoardState:
             san=san,
             position_before_fen=position_before,
             position_after_fen=position_after,
-            is_capture=self.board.is_capture(move),
+            is_capture=is_capture,
             is_check=self.board.is_check(),
             is_checkmate=self.board.is_checkmate(),
             evaluation_before=evaluation_before,
@@ -331,6 +334,7 @@ class BoardState:
         fen = self.board.fen()
         
         if use_cache and fen in self._position_cache:
+            self._position_cache.move_to_end(fen)
             return self._position_cache[fen]
         
         logger.debug(f"Analyzing position: {fen}")
@@ -370,6 +374,8 @@ class BoardState:
         
         if use_cache:
             self._position_cache[fen] = analysis
+            if len(self._position_cache) > self._max_position_cache:
+                self._position_cache.popitem(last=False)
             
         return analysis
 

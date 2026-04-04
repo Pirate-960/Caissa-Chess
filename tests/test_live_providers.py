@@ -27,11 +27,11 @@ import pytest
 from typing import Optional, Tuple
 from dataclasses import dataclass
 
-# Skip all tests if --run-live flag is not provided
-pytestmark = pytest.mark.skipif(
-    not pytest.config.getoption("--run-live", default=False) if hasattr(pytest, 'config') else True,
-    reason="Live tests require --run-live flag"
-)
+# Skip all tests if --run-live flag is not provided.
+# The ``--run-live`` flag is registered in the root conftest.py. Here we use
+# the ``live`` marker which conftest.pytest_collection_modifyitems will skip
+# automatically when the flag is absent.
+pytestmark = pytest.mark.live
 
 
 @dataclass
@@ -421,21 +421,8 @@ class TestProviderComparison(unittest.TestCase):
         self.assertGreater(successful, 0, "At least one provider should be available")
 
 
-def pytest_addoption(parser):
-    """Add --run-live option to pytest."""
-    parser.addoption(
-        "--run-live",
-        action="store_true",
-        default=False,
-        help="Run live API tests (requires API keys)"
-    )
-
-
-def pytest_configure(config):
-    """Configure pytest markers."""
-    config.addinivalue_line(
-        "markers", "live: mark test as requiring live API access"
-    )
+# NOTE: pytest_addoption and pytest_configure are now defined in the
+# root conftest.py.  They are no longer needed in this test file.
 
 
 if __name__ == "__main__":

@@ -14,9 +14,9 @@ Features:
 
 import logging
 import shutil
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from enum import Enum
-from pathlib import Path
 from typing import Dict, List, Optional
 import chess
 import chess.engine
@@ -91,7 +91,8 @@ class StockfishClient:
         self.time_limit = time_limit
         self.threads = threads
         self.hash_mb = hash_mb
-        self.analysis_cache: Dict[str, EvaluationResult] = {}
+        self._max_cache_size = 4096
+        self.analysis_cache: OrderedDict[str, EvaluationResult] = OrderedDict()
         self._cache_hits = 0
         self._cache_misses = 0
         
@@ -170,9 +171,10 @@ class StockfishClient:
         
         fen = board.fen()
         
-        # Check cache
+        # Check cache (move to end for LRU)
         if fen in self.analysis_cache:
             self._cache_hits += 1
+            self.analysis_cache.move_to_end(fen)
             return self.analysis_cache[fen]
         
         self._cache_misses += 1
@@ -186,13 +188,15 @@ class StockfishClient:
             score = analysis.get("score")
             pv = analysis.get("pv", [])
             
-            # Convert score to centipawns
-            if score.is_mate():
-                score_cp = 32000 if score.white() > 0 else -32000  # Mate value
+            # Convert score to centipawns (from White's perspective)
+            white_score = score.white()
+            if white_score.is_mate():
+                mate_moves = white_score.mate()
+                score_cp = 32000 if mate_moves > 0 else -32000  # Mate value
                 is_mate = True
-                mate_in = score.mate()
+                mate_in = mate_moves
             else:
-                score_cp = score.white().cp
+                score_cp = white_score.score()
                 is_mate = False
                 mate_in = None
             
@@ -205,9 +209,12 @@ class StockfishClient:
                 depth=analysis.get("depth", 0),
                 time_used=analysis.get("time", 0.0),
             )
+
             
-            # Cache result
+            # Cache result (evict oldest if over capacity)
             self.analysis_cache[fen] = result
+            if len(self.analysis_cache) > self._max_cache_size:
+                self.analysis_cache.popitem(last=False)
             return result
             
         except Exception as e:
@@ -385,7 +392,7 @@ class StockfishClient:
         return {
             "is_forced": len(list(board.legal_moves)) == 1,
             "is_sacrifice": is_sacrifice,
-            "is_check": board.is_check() if board.is_check() else move.uci().endswith("+"),
+            "is_check": board.gives_check(move),
             "eval_swing": abs(analysis["eval_change"]),
             "opportunity_cost": opportunity_cost,
             "stunning_factor": stunning,
@@ -447,7 +454,7 @@ class StockfishClient:
         return {
             "is_forced": len(list(board.legal_moves)) == 1,
             "is_sacrifice": False,
-            "is_check": board.is_check() or move.uci().endswith("+"),
+            "is_check": board.gives_check(move),
             "eval_swing": 0,
             "opportunity_cost": 0,
             "stunning_factor": 0.0,
