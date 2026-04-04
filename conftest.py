@@ -13,6 +13,7 @@ Ensures:
 
 import sys
 import os
+import pytest
 
 # ── Ensure project root is importable ────────────────────────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +39,10 @@ def pytest_configure(config):
         "markers",
         "live: mark test as requiring live API access (use --run-live to run).",
     )
+    config.addinivalue_line(
+        "markers",
+        "asyncio: mark test as async test.",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -45,10 +50,27 @@ def pytest_collection_modifyitems(config, items):
     if config.getoption("--run-live"):
         return
 
-    skip_live = __import__("pytest").mark.skip(reason="need --run-live option to run")
+    skip_live = pytest.mark.skip(reason="need --run-live option to run")
     for item in items:
         if "live" in item.keywords:
             item.add_marker(skip_live)
+
+
+# ── Async test support ─────────────────────────────────────────────────────
+# If pytest-asyncio is installed, use it. Otherwise provide basic event loop.
+
+try:
+    import pytest_asyncio
+    # pytest-asyncio will handle async tests
+except ImportError:
+    import asyncio
+    
+    @pytest.fixture
+    def event_loop():
+        """Create event loop for async tests."""
+        loop = asyncio.new_event_loop()
+        yield loop
+        loop.close()
 
 
 # ── Silence log_manager auto-setup during tests ─────────────────────────────

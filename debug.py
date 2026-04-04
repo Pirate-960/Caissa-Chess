@@ -1,0 +1,1 @@
+import main; import export.tournament_exporter; print('Syntax OK')

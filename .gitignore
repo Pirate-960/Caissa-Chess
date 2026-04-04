@@ -48,6 +48,8 @@ env/
 
 # Generated files
 *.pgn
+*.json
+*.html
 *.gif
 *.mp4
 output/
@@ -60,3 +62,6 @@ engines/
 
 # Logs
 logs/
+
+# Output
+games/*

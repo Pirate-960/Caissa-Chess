@@ -11,6 +11,7 @@ All functionality is accessible from this single file.
 import sys
 import os
 import time
+import datetime
 import logging
 import threading
 from pathlib import Path
@@ -2233,12 +2234,15 @@ def main_menu():
         print()
         
         menu_items = [
-            f"{C.GREEN}Generate a Game{C.RESET}        - Create a single chess masterpiece",
-            f"{C.GREEN}Batch Generate{C.RESET}         - Generate multiple games at once",
-            f"{C.GREEN}Historical Matchup{C.RESET}     - Pit legendary players against each other",
-            f"{C.GREEN}Analyze PGN{C.RESET}            - Analyze an existing chess game",
-            f"{C.GREEN}Run Benchmarks{C.RESET}         - Test and compare LLM providers",
-            f"{C.CYAN}View Styles{C.RESET}            - Browse all available playing styles",
+            f"{C.GREEN}Generate a Game{C.RESET}         - Create a single chess masterpiece",
+            f"{C.GREEN}Batch Generate{C.RESET}          - Generate multiple games at once",
+            f"{C.GREEN}Historical Matchup{C.RESET}      - Pit legendary players against each other",
+            f"{C.GREEN}Analyze PGN{C.RESET}             - Analyze an existing chess game",
+            f"{C.GREEN}Run Benchmarks{C.RESET}          - Test and compare LLM providers",
+            f"{C.MAGENTA}LLM vs LLM Match{C.RESET}        - Single game between two LLMs",
+            f"{C.MAGENTA}LLM Tournament{C.RESET}          - Run a full tournament",
+            f"{C.MAGENTA}ELO Ratings{C.RESET}             - View LLM chess ratings",
+            f"{C.CYAN}View Styles{C.RESET}             - Browse all available playing styles",
             f"{C.CYAN}Configuration{C.RESET}          - View and manage settings",
             f"{C.CYAN}System Info{C.RESET}            - Check system status and components",
             f"{C.RED}Exit{C.RESET}                   - Quit CAISSA",
@@ -2267,12 +2271,18 @@ def main_menu():
                 choice = 4
             elif cmd in ("benchmark", "bench"):
                 choice = 5
-            elif cmd in ("styles", "s"):
+            elif cmd in ("match", "llm"):
                 choice = 6
-            elif cmd in ("config", "cfg", "c"):
+            elif cmd in ("tournament", "tourney", "t"):
                 choice = 7
-            elif cmd in ("info", "i"):
+            elif cmd in ("elo", "ratings", "r"):
                 choice = 8
+            elif cmd in ("styles", "s"):
+                choice = 9
+            elif cmd in ("config", "cfg", "c"):
+                choice = 10
+            elif cmd in ("info", "i"):
+                choice = 11
             else:
                 print(f"  {C.RED}Unknown command. Enter 1-{len(menu_items)} or a keyword.{C.RESET}")
                 continue
@@ -2288,16 +2298,472 @@ def main_menu():
         elif choice == 5:
             interactive_benchmark()
         elif choice == 6:
-            show_styles()
+            interactive_match()
         elif choice == 7:
-            interactive_config()
+            interactive_tournament()
         elif choice == 8:
+            show_elo_ratings()
+        elif choice == 9:
+            show_styles()
+        elif choice == 10:
+            interactive_config()
+        elif choice == 11:
             show_info()
         elif choice == len(menu_items):
             print(f"\n  {C.DIM}Goodbye! May your games be beautiful.{C.RESET}\n")
             break
         else:
             print(f"  {C.RED}Invalid choice.{C.RESET}")
+
+
+# =============================================================================
+# LLM vs LLM TOURNAMENT SYSTEM (v0.5.0)
+# =============================================================================
+
+def interactive_match():
+    """
+    Interactive LLM vs LLM single match setup.
+    
+    Allows user to configure and run a single game between two LLM players.
+    Supports the same export formats as regular game generation (PGN, Markdown, HTML, JSON).
+    """
+    print()
+    print_header("LLM vs LLM Match")
+    
+    # Step 1: Select providers
+    providers = _get_available_providers()
+    if len(providers) < 1:
+        print_error("No LLM providers available. Configure API keys first.")
+        return
+    
+    print(f"  {C.BOLD}Available providers:{C.RESET}")
+    for i, p in enumerate(providers, 1):
+        print(f"    {i}. {p}")
+    print()
+    
+    # White player - prompt_int(prompt, default, min_val, max_val)
+    white_idx = prompt_int("Select WHITE player (number)", 1, 1, len(providers))
+    white_provider_name = providers[white_idx - 1]
+    
+    # Black player
+    black_default = min(2, len(providers))
+    black_idx = prompt_int("Select BLACK player (number)", black_default, 1, len(providers))
+    black_provider_name = providers[black_idx - 1]
+    
+    # Step 2: Time control
+    print()
+    print(f"  {C.BOLD}Time controls:{C.RESET}")
+    time_controls = ["bullet (5s)", "blitz (15s)", "rapid (30s)", "classical (60s)", "unlimited"]
+    for i, tc in enumerate(time_controls, 1):
+        print(f"    {i}. {tc}")
+    
+    tc_idx = prompt_int("Select time control", 3, 1, len(time_controls))
+    time_control_map = {
+        1: "bullet", 2: "blitz", 3: "rapid", 4: "classical", 5: "unlimited"
+    }
+    time_control = time_control_map[tc_idx]
+    
+    # Step 3: Export format (consistent with game generation)
+    print()
+    print(f"  {C.BOLD}Output format:{C.RESET}")
+    formats = [
+        ("pgn", "PGN (default)"),
+        ("markdown", "Markdown"),
+        ("html", "HTML"),
+        ("json", "JSON"),
+    ]
+    for i, (_, desc) in enumerate(formats, 1):
+        print(f"    {i}. {desc}")
+    print(f"    0. ← Back")
+    
+    fmt_idx = prompt_int("Enter choice", 1, 1, len(formats))
+    export_format = formats[fmt_idx - 1][0]
+    
+    # Step 4: Confirm (removed custom filename since exporter handles it)
+    print()
+    print(f"  {C.BOLD}Match Configuration:{C.RESET}")
+    print(f"    White:       {white_provider_name}")
+    print(f"    Black:       {black_provider_name}")
+    print(f"    Time:        {time_control}")
+    print(f"    Format:      {export_format}")
+    print(f"    Output:      games/matches/")
+    print()
+    
+    confirm = prompt_yes_no(
+        f"Play {white_provider_name} (W) vs {black_provider_name} (B)?",
+        default=True
+    )
+    
+    if not confirm:
+        print_info("Match cancelled.")
+        return
+    
+    _execute_llm_match(white_provider_name, black_provider_name, time_control, export_format)
+
+
+def _execute_llm_match(
+    white_provider_name: str, 
+    black_provider_name: str, 
+    time_control: str,
+    export_format: str = "pgn",
+):
+    """
+    Execute a single LLM vs LLM match.
+    
+    Uses the unified GameExporter system for consistent output across the system.
+    
+    Supports formats:
+    - pgn: Standard PGN with annotations
+    - markdown: Rich markdown with game summary
+    - html: Interactive HTML with dark mode
+    - json: Structured data with match metadata
+    """
+    import asyncio
+    from core.tournament_player import TournamentPlayer, TimeControl
+    from core.match_engine import MatchEngine
+    
+    print()
+    print_header(f"{white_provider_name} vs {black_provider_name}")
+    
+    # Create providers
+    try:
+        white_provider = _create_provider(white_provider_name)
+        black_provider = _create_provider(black_provider_name)
+        print_success(f"White: {white_provider_name}")
+        print_success(f"Black: {black_provider_name}")
+    except Exception as e:
+        print_error(f"Failed to create providers: {e}")
+        return
+    
+    # Create players
+    white_player = TournamentPlayer(
+        name=white_provider_name,
+        provider=white_provider,
+        provider_name=white_provider_name,
+    )
+    black_player = TournamentPlayer(
+        name=black_provider_name,
+        provider=black_provider,
+        provider_name=black_provider_name,
+    )
+    
+    # Map time control
+    tc_map = {
+        "bullet": TimeControl.BULLET,
+        "blitz": TimeControl.BLITZ,
+        "rapid": TimeControl.RAPID,
+        "classical": TimeControl.CLASSICAL,
+        "unlimited": TimeControl.UNLIMITED,
+    }
+    tc = tc_map.get(time_control, TimeControl.RAPID)
+    
+    print_info(f"Time control: {time_control}")
+    print()
+    
+    # Create and run match
+    engine = MatchEngine(white_player, black_player, time_control=tc)
+    
+    start_time = time.time()
+    
+    try:
+        with Spinner("Playing match"):
+            result = asyncio.run(engine.play_match())
+        
+        elapsed = time.time() - start_time
+        
+        # Display results
+        print()
+        print(f"  {C.BOLD}{'═' * 50}{C.RESET}")
+        print(f"  {C.BOLD}Match Result{C.RESET}")
+        print(f"  {C.BOLD}{'═' * 50}{C.RESET}")
+        
+        if result.result.value == "1-0":
+            print(f"    Winner: {C.GREEN}{white_player.name} (White){C.RESET}")
+        elif result.result.value == "0-1":
+            print(f"    Winner: {C.GREEN}{black_player.name} (Black){C.RESET}")
+        else:
+            print(f"    Result: {C.YELLOW}Draw{C.RESET}")
+        
+        print(f"    Result: {result.result.value}")
+        print(f"    Termination: {result.termination.value}")
+        print(f"    Moves: {result.total_moves}")
+        print(f"    Duration: {elapsed:.1f}s")
+        
+        if result.elo_change:
+            print(f"    ELO change: {result.elo_change.summary}")
+        
+        # Export game using the unified exporter system
+        output_dir = Path("games") / "matches"
+        
+        # Use the proper tournament exporter for consistent output
+        from export.tournament_exporter import export_match
+        
+        exported = export_match(
+            match_result=result,
+            output_dir=str(output_dir),
+            formats=[export_format],
+            include_elo=True,
+        )
+        
+        print()
+        for fmt, path in exported.items():
+            print_success(f"Game saved ({fmt}): {path}")
+        
+    except Exception as e:
+        print_error(f"Match error: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+def interactive_tournament():
+    """
+    Interactive tournament setup.
+    
+    Allows user to configure and run a full tournament between multiple LLM players.
+    """
+    print()
+    print_header("LLM vs LLM Tournament")
+    
+    # Step 1: Select format
+    print(f"  {C.BOLD}Tournament formats:{C.RESET}")
+    formats = [
+        ("round_robin", "Round Robin - Everyone plays everyone once"),
+        ("double_round_robin", "Double Round Robin - Everyone plays everyone twice"),
+        ("swiss", "Swiss - Pair by score each round"),
+        ("knockout", "Knockout - Single elimination bracket"),
+    ]
+    for i, (_, desc) in enumerate(formats, 1):
+        print(f"    {i}. {desc}")
+    
+    # prompt_int(prompt, default, min_val, max_val)
+    fmt_idx = prompt_int("Select format", 1, 1, len(formats))
+    format_name = formats[fmt_idx - 1][0]
+    
+    # Step 2: Select players
+    providers = _get_available_providers()
+    if len(providers) < 2:
+        print_error("Need at least 2 providers for a tournament.")
+        return
+    
+    print()
+    print(f"  {C.BOLD}Available providers:{C.RESET}")
+    for i, p in enumerate(providers, 1):
+        print(f"    {i}. {p}")
+    
+    print()
+    print_info("Enter player numbers separated by commas (e.g., 1,2,3)")
+    selection = input(f"  {C.YELLOW}>{C.RESET} Players: ").strip()
+    
+    try:
+        indices = [int(x.strip()) for x in selection.split(",")]
+        selected_providers = [providers[i-1] for i in indices if 1 <= i <= len(providers)]
+    except (ValueError, IndexError):
+        print_error("Invalid selection. Using first 2 providers.")
+        selected_providers = providers[:2]
+    
+    if len(selected_providers) < 2:
+        print_error("Need at least 2 players.")
+        return
+    
+    # Step 3: Tournament name
+    default_name = f"CAISSA Tournament {datetime.datetime.now().strftime('%Y-%m-%d')}"
+    name = input(f"  Tournament name [{default_name}]: ").strip() or default_name
+    
+    # Step 4: Export format
+    print()
+    print(f"  {C.BOLD}Export formats:{C.RESET}")
+    export_formats = [
+        ("markdown", "Markdown (default)"),
+        ("html", "HTML"),
+        ("json", "JSON"),
+        ("pgn", "PGN (all games)"),
+    ]
+    for i, (_, desc) in enumerate(export_formats, 1):
+        print(f"    {i}. {desc}")
+    
+    export_idx = prompt_int("Select export format", 1, 1, len(export_formats))
+    export_format = export_formats[export_idx - 1][0]
+    
+    # Step 5: Confirm
+    print()
+    print(f"  {C.BOLD}Tournament Configuration:{C.RESET}")
+    print(f"    Name: {name}")
+    print(f"    Format: {format_name}")
+    print(f"    Players: {', '.join(selected_providers)}")
+    print(f"    Export: {export_format}")
+    print()
+    
+    confirm = prompt_yes_no("Start tournament?", default=True)
+    if not confirm:
+        print_info("Tournament cancelled.")
+        return
+    
+    _execute_tournament(name, format_name, selected_providers, export_format)
+
+
+def _execute_tournament(name: str, format_name: str, provider_names: List[str], export_format: str = "markdown"):
+    """
+    Execute a full tournament.
+    
+    Supports multiple export formats:
+    - markdown: Rich markdown report
+    - html: Interactive HTML report
+    - json: Structured data format
+    - pgn: All games in PGN format
+    """
+    import asyncio
+    from core.tournament_player import TournamentPlayer, TimeControl
+    from core.tournament import Tournament, TournamentConfig, TournamentFormat
+    from export.tournament_exporter import export_tournament
+    
+    print()
+    print_header(f"Tournament: {name}")
+    
+    # Create players
+    players = []
+    for pname in provider_names:
+        try:
+            provider = _create_provider(pname)
+            player = TournamentPlayer(
+                name=pname,
+                provider=provider,
+                provider_name=pname,
+            )
+            players.append(player)
+            print_success(f"Player registered: {pname}")
+        except Exception as e:
+            print_error(f"Failed to create {pname}: {e}")
+    
+    if len(players) < 2:
+        print_error("Not enough players for tournament.")
+        return
+    
+    # Map format
+    format_map = {
+        "round_robin": TournamentFormat.ROUND_ROBIN,
+        "double_round_robin": TournamentFormat.DOUBLE_ROUND_ROBIN,
+        "swiss": TournamentFormat.SWISS,
+        "knockout": TournamentFormat.KNOCKOUT,
+    }
+    tournament_format = format_map.get(format_name, TournamentFormat.ROUND_ROBIN)
+    
+    # Create config
+    config = TournamentConfig(
+        name=name,
+        format=tournament_format,
+        players=players,
+        time_control=TimeControl.RAPID,
+    )
+    
+    tournament = Tournament(config)
+    
+    print()
+    print_info(f"Format: {tournament_format.value}")
+    print_info(f"Rounds: {config.rounds}")
+    print_info(f"Players: {len(players)}")
+    print()
+    
+    start_time = time.time()
+    
+    try:
+        with Spinner("Running tournament"):
+            result = asyncio.run(tournament.run())
+        
+        elapsed = time.time() - start_time
+        
+        # Display results
+        print()
+        print(f"  {C.BOLD}{'═' * 55}{C.RESET}")
+        print(f"  {C.BOLD}Tournament Complete{C.RESET}")
+        print(f"  {C.BOLD}{'═' * 55}{C.RESET}")
+        
+        if result.winner:
+            print(f"    🏆 Winner: {C.GREEN}{result.winner.name}{C.RESET}")
+        
+        print(f"    Total games: {result.total_games}")
+        print(f"    Decisive: {result.decisive_games}")
+        print(f"    Draws: {result.draws}")
+        print(f"    Duration: {elapsed:.1f}s")
+        
+        # Standings
+        print()
+        print(f"  {C.BOLD}Final Standings:{C.RESET}")
+        print(f"    {'#':<3} {'Player':<20} {'Pts':<6} {'W':<3} {'D':<3} {'L':<3}")
+        print(f"    {'-'*40}")
+        
+        for standing in result.standings:
+            rank_str = f"{standing.rank}."
+            print(f"    {rank_str:<3} {standing.player.name:<20} {standing.points:<6.1f} "
+                  f"{standing.wins:<3} {standing.draws:<3} {standing.losses:<3}")
+        
+        # Export - use selected format
+        output_dir = Path("tournaments") / name.replace(" ", "_").lower()
+        
+        # Map user selection to export formats
+        format_list = [export_format]
+        # Always include json for ELO tracking
+        if "json" not in format_list:
+            format_list.append("json")
+        
+        exported = export_tournament(result, str(output_dir), formats=format_list)
+        
+        print()
+        print_success(f"Results exported to: {output_dir}")
+        for fmt, path in exported.items():
+            print_info(f"  {fmt}: {Path(path).name}")
+        
+    except Exception as e:
+        print_error(f"Tournament error: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+def show_elo_ratings():
+    """Display ELO ratings from tournament history."""
+    print()
+    print_header("ELO Ratings")
+    
+    # Check for tournament history
+    tournaments_dir = Path("tournaments")
+    if not tournaments_dir.exists():
+        print_info("No tournament history found.")
+        print_info("Run a tournament first to generate ELO ratings.")
+        return
+    
+    # Collect ratings from tournament results
+    import json
+    ratings = {}
+    
+    for tournament_dir in tournaments_dir.iterdir():
+        if tournament_dir.is_dir():
+            json_file = tournament_dir / "tournament.json"
+            if json_file.exists():
+                try:
+                    data = json.loads(json_file.read_text(encoding="utf-8"))
+                    for standing in data.get("standings", []):
+                        player_name = standing.get("player_name", "Unknown")
+                        rating = standing.get("player", {}).get("elo_rating", 1500)
+                        if player_name not in ratings:
+                            ratings[player_name] = {"rating": rating, "games": 0}
+                        ratings[player_name]["rating"] = rating
+                        ratings[player_name]["games"] += standing.get("games_played", 0)
+                except Exception:
+                    continue
+    
+    if not ratings:
+        print_info("No ELO data available yet.")
+        return
+    
+    # Sort by rating
+    sorted_ratings = sorted(ratings.items(), key=lambda x: -x[1]["rating"])
+    
+    print(f"    {'#':<3} {'Player':<25} {'Rating':<8} {'Games':<6}")
+    print(f"    {'-'*45}")
+    
+    for i, (name, data) in enumerate(sorted_ratings, 1):
+        print(f"    {i:<3} {name:<25} {data['rating']:<8} {data['games']:<6}")
+    
+    print()
 
 
 # =============================================================================
@@ -2325,6 +2791,11 @@ Usage:
   python main.py config           View configuration
   python main.py info             Show system info
 
+LLM vs LLM Tournament (v0.5.0):
+  python main.py match            Single LLM vs LLM match
+  python main.py tournament       Full tournament mode
+  python main.py elo              View ELO ratings
+
 Configuration:
   Edit caissa_config.yaml for all settings.
   Create caissa_config.local.yaml for personal overrides.
@@ -2347,6 +2818,12 @@ Configuration:
             "config": interactive_config,
             "cfg": interactive_config,
             "info": show_info,
+            # v0.5.0 Tournament commands
+            "match": interactive_match,
+            "tournament": interactive_tournament,
+            "tourney": interactive_tournament,
+            "elo": show_elo_ratings,
+            "ratings": show_elo_ratings,
         }
         
         handler = shortcuts.get(cmd)

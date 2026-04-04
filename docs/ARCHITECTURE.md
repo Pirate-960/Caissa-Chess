@@ -866,6 +866,210 @@ Tests cover:
 
 ---
 
+## v0.5.0: LLM vs LLM Tournament System
+
+> **Note**: Added in v0.5.0 (April 2026). This section documents the multi-agent tournament architecture.
+
+### Overview
+
+The Tournament System extends CAISSA into a **multi-agent competitive arena** where different LLM providers compete against each other in organized chess tournaments.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        CAISSA TOURNAMENT ENGINE v0.5.0                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐       │
+│  │   WHITE PLAYER   │    │   BLACK PLAYER   │    │   COMMENTATOR    │       │
+│  │   (LLM 1)        │◄──►│   (LLM 2)        │◄──►│   (LLM 3)        │       │
+│  └────────┬─────────┘    └────────┬─────────┘    └────────┬─────────┘       │
+│           │                       │                       │                  │
+│           ▼                       ▼                       ▼                  │
+│  ┌────────────────────────────────────────────────────────────────────┐     │
+│  │                     MATCH ENGINE (core/match_engine.py)            │     │
+│  │  • Move prompting/parsing    • Illegal move handling (3 attempts) │     │
+│  │  • Time control              • Game termination detection          │     │
+│  └────────────────────────────────────────────────────────────────────┘     │
+│           │                                                                  │
+│           ▼                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────┐     │
+│  │                 TOURNAMENT ORCHESTRATOR (core/tournament.py)       │     │
+│  │  • Round-robin, Swiss, Knockout formats                            │     │
+│  │  • ELO rating calculation    • Standings and tiebreaks             │     │
+│  └────────────────────────────────────────────────────────────────────┘     │
+│           │                                                                  │
+│           ▼                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────┐     │
+│  │                    ANALYTICS & EXPORT                              │     │
+│  │  • PGN/HTML/JSON/MD    • Beauty scoring    • Style fingerprints   │     │
+│  └────────────────────────────────────────────────────────────────────┘     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Core Tournament Components
+
+#### 1. Match Engine (`core/match_engine.py`)
+
+Conducts single games between two LLM players:
+
+```python
+class MatchEngine:
+    """Single game conductor with full state management."""
+    
+    def __init__(
+        self,
+        white: TournamentPlayer,
+        black: TournamentPlayer,
+        time_control: TimeControl = TimeControl.RAPID,
+        arbiter: Optional[LLMProvider] = None,
+    )
+    
+    async def play_match(self) -> MatchResult
+```
+
+**Key Features**:
+- Move prompting with position context and move history
+- Illegal move handling (3 attempts before forfeit)
+- Time control enforcement (bullet, blitz, rapid, classical)
+- Game termination detection (checkmate, stalemate, draw rules)
+- Move-by-move metadata tracking
+
+#### 2. Tournament Orchestrator (`core/tournament.py`)
+
+Manages multi-player tournaments:
+
+```python
+class Tournament:
+    """Full tournament with pairings, rounds, and standings."""
+    
+    async def run(self) -> TournamentResult
+```
+
+**Supported Formats**:
+| Format | Description |
+|--------|-------------|
+| `round_robin` | Every player plays every other player once |
+| `double_round_robin` | Twice, with colors swapped |
+| `swiss` | Pairing by current score |
+| `knockout` | Single elimination bracket |
+| `double_elim` | Second chance bracket |
+| `arena` | Continuous rapid games |
+
+#### 3. Live Commentary (`core/commentary.py`)
+
+A third LLM provides real-time game analysis:
+
+```python
+class LiveCommentator:
+    """AI-powered chess commentary."""
+    
+    def comment_on_move(self, board: Board, move: Move) -> str
+    def detect_critical_moment(self, eval_before: float, eval_after: float) -> bool
+    def generate_postgame_summary(self, result: MatchResult) -> str
+```
+
+**Commentary Styles**: grandmaster, entertaining, dramatic, educational, humorous
+
+#### 4. ELO Rating System (`core/elo_calculator.py`)
+
+Standard FIDE ELO calculation:
+
+```
+K = 32
+Expected = 1 / (1 + 10^((opponent_elo - player_elo) / 400))
+New_ELO = Old_ELO + K × (Actual - Expected)
+```
+
+### Tournament Data Structures
+
+```python
+@dataclass
+class TournamentPlayer:
+    """LLM competitor in a tournament."""
+    name: str
+    provider: LLMProvider
+    elo_rating: int = 1500
+    style_persona: Optional[str] = None
+    temperature: float = 0.7
+    wins: int = 0
+    draws: int = 0
+    losses: int = 0
+
+@dataclass
+class MatchResult:
+    """Complete result of a single match."""
+    white: TournamentPlayer
+    black: TournamentPlayer
+    result: GameResult  # WHITE_WINS, BLACK_WINS, DRAW
+    pgn: str
+    moves: List[str]
+    move_times: List[float]
+    beauty_score: float
+    commentary: List[str]
+    illegal_move_attempts: Dict[str, int]
+
+@dataclass
+class TournamentResult:
+    """Complete tournament results."""
+    config: TournamentConfig
+    matches: List[MatchResult]
+    standings: List[TournamentStanding]
+    elo_changes: Dict[str, int]
+```
+
+### Integration Points
+
+The tournament system integrates with existing CAISSA components:
+
+| Component | Integration |
+|-----------|-------------|
+| `LLMProvider` | Tournament players use existing provider implementations |
+| `PromptManager` | Move prompts leverage era/style system for personas |
+| `BeautyEvaluator` | Games scored using existing beauty algorithm |
+| `StockfishClient` | Position evaluation for commentary (optional) |
+| `GameExporter` | Results exported via existing export pipeline |
+
+### CLI Commands
+
+```bash
+# Single match
+caissa match --white openai:gpt-4 --black anthropic:claude-3.5
+
+# Full tournament
+caissa tournament --format round-robin --players gpt-4,claude,gemini
+
+# With configuration file
+caissa tournament --config tournament.yaml
+```
+
+### File Structure (v0.5.0 Additions)
+
+```
+caissa-chess/
+├── core/
+│   ├── match_engine.py          # NEW: Single game conductor
+│   ├── tournament.py            # NEW: Tournament orchestrator
+│   ├── commentary.py            # NEW: Live commentary system
+│   ├── tournament_analytics.py  # NEW: Results & insights
+│   ├── elo_calculator.py        # NEW: ELO rating system
+│   └── pairing_algorithms.py    # NEW: Swiss, round-robin pairings
+│
+├── docs/
+│   └── LLM_VS_LLM.md           # NEW: Tournament documentation
+│
+└── tournaments/                 # NEW: Tournament output directory
+    └── {tournament-name}/
+        ├── tournament.json
+        ├── standings.md
+        ├── games/
+        └── reports/
+```
+
+> **Full Documentation**: See [LLM_VS_LLM.md](LLM_VS_LLM.md) for complete tournament system documentation.
+
+---
+
 ## Contributing
 
 To add a new provider:

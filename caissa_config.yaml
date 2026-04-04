@@ -74,13 +74,13 @@ stockfish:
   path: "engines/stockfish-windows-x86-64-avx2.exe"
 
   # Analysis depth (higher = stronger but slower). Range: 1–30
-  depth: 15
+  depth: 30
 
   # Number of CPU threads for Stockfish. Range: 1–(your CPU cores)
-  threads: 1
+  threads: 8
 
   # Hash table size in megabytes. Range: 16–4096
-  hash_mb: 64
+  hash_mb: 1024
 
   # Time limit per analysis in seconds. Range: 0.01–10.0
   time_limit: 0.1
@@ -145,7 +145,7 @@ generation:
   #   random  – Randomly assign 1-0, 0-1, or 1/2-1/2 each game.
   #   neutral – Let the LLM choose the most dramatically satisfying result.
   # Choices: white | black | draw | random | neutral
-  bias: "neutral"
+  bias: "random"
 
   # --- Blunder Tolerance ---
   # Maximum centipawn loss before a move is rejected. Range: 0.5–5.0
@@ -154,7 +154,7 @@ generation:
   # --- Advanced: Difficulty Level ---
   # Target difficulty of the generated game.
   # Choices: beginner | intermediate | advanced | master | grandmaster
-  difficulty: "intermediate"
+  difficulty: "master"
 
   # --- Advanced: Narrative Arc ---
   # Story structure for the game. null = auto-select.
@@ -355,7 +355,7 @@ logging:
   # --- Verbosity ---
   # Console output verbosity: quiet | normal | verbose | debug
   # Only takes effect when console_logs is true.
-  verbosity: "normal"
+  verbosity: "verbose"
 
 
 # ==============================================================================
@@ -387,3 +387,166 @@ advanced:
   # Track generation statistics across sessions.
   track_stats: true
   stats_file: ".caissa_stats.json"
+
+
+# ==============================================================================
+# 10. LLM vs LLM TOURNAMENT CONFIGURATION (v0.5.0)
+# ==============================================================================
+# Controls the LLM vs LLM competitive arena system.
+
+tournament:
+  # --- Default Tournament Settings ---
+  # Default tournament format when not specified via CLI.
+  # Choices: single_match | match_series | round_robin | double_round_robin |
+  #          swiss | knockout | double_elim | arena
+  default_format: "round_robin"
+  
+  # Default number of rounds (0 = auto-calculate based on format/players)
+  default_rounds: 0
+  
+  # --- Time Controls ---
+  # Default time control for tournament games.
+  # Choices: bullet | blitz | rapid | classical | correspondence | unlimited
+  default_time_control: "rapid"
+  
+  # Time per move in seconds for each time control
+  time_per_move:
+    bullet: 5
+    blitz: 15
+    rapid: 30
+    classical: 60
+    correspondence: 3600
+    unlimited: 0
+  
+  # --- Scoring System ---
+  # Points awarded for each result
+  win_points: 1.0
+  draw_points: 0.5
+  loss_points: 0.0
+  bye_points: 1.0           # Points for receiving a bye (odd players)
+  
+  # --- ELO Rating System ---
+  elo:
+    # Initial rating for new players
+    initial_rating: 1500
+    
+    # K-factor strategy: fixed | fide | uscf | dynamic | provisional
+    # - fixed: constant K-factor
+    # - fide: FIDE rules (K=40 new, K=20 <2400, K=10 ≥2400)
+    # - uscf: USCF rules based on rating ranges
+    # - dynamic: decreases with games played
+    # - provisional: high K until established
+    k_factor_strategy: "fide"
+    
+    # K-factor values (used when strategy is 'fixed' or as base values)
+    k_factor: 32
+    k_factor_new: 40          # For players with <30 games
+    k_factor_established: 20  # For established players
+    k_factor_master: 10       # For players rated ≥2400
+    
+    # Rating floor and ceiling
+    rating_floor: 100
+    rating_ceiling: 3500
+    
+    # Save ELO history between sessions
+    persist_ratings: true
+    ratings_file: "tournaments/elo_ratings.json"
+  
+  # --- Tiebreak Methods ---
+  # Order of tiebreak methods when scores are equal.
+  # Choices: h2h | sb | buchholz | wins | black_wins | neustadtl | performance
+  tiebreak_methods:
+    - "h2h"           # Head-to-head result
+    - "sb"            # Sonneborn-Berger
+    - "wins"          # Number of wins
+  
+  # --- Match Engine Settings ---
+  match:
+    # Maximum moves per game before adjudication
+    max_moves: 500
+    
+    # Maximum retries for illegal moves before forfeit
+    max_retries: 3
+    
+    # Allow draws or play until decisive
+    allow_draws: true
+    
+    # Randomize first-round colors
+    shuffle_colors: true
+    
+    # Include opening name/ECO code detection
+    detect_opening: true
+  
+  # --- Player Personas ---
+  # Enable legendary player style personas for LLMs
+  enable_personas: true
+  
+  # Default persona when not specified (null = no persona)
+  default_persona: null
+  
+  # Available personas: tal | karpov | kasparov | fischer | capablanca |
+  #                     alekhine | morphy | petrosian | carlsen | nakamura
+  
+  # --- Live Commentary ---
+  commentary:
+    # Enable live game commentary
+    enabled: false
+    
+    # Commentary style: grandmaster | enthusiastic | analytical | educational |
+    #                   twitch | vintage | dramatic | stoic
+    style: "grandmaster"
+    
+    # Commentary depth: key_moments | frequent | every_move
+    depth: "key_moments"
+    
+    # Multi-commentator panel (combine multiple styles)
+    multi_panel: false
+    panel_styles: ["grandmaster", "enthusiastic"]
+  
+  # --- Tournament Output ---
+  output:
+    # Output directory for tournament results
+    output_dir: "tournaments"
+    
+    # Export formats to generate automatically
+    auto_export:
+      - "markdown"
+      - "json"
+      - "pgn"
+    
+    # Include crosstable in reports
+    include_crosstable: true
+    
+    # Include ELO changes in reports
+    include_elo_changes: true
+    
+    # Generate HTML report with interactive features
+    html_report: true
+  
+  # --- Arena Mode ---
+  # Settings specific to arena (continuous) tournaments
+  arena:
+    # Duration in minutes (0 = unlimited)
+    duration_minutes: 60
+    
+    # Points for arena win/draw
+    arena_win_points: 2
+    arena_draw_points: 1
+    
+    # Berserk mode (halve time for double points on win)
+    allow_berserk: false
+    berserk_bonus: 1
+  
+  # --- Analytics ---
+  analytics:
+    # Enable style fingerprint analysis
+    style_fingerprinting: true
+    
+    # Track per-provider performance metrics
+    provider_metrics: true
+    
+    # Calculate decision quality scores
+    decision_quality: true
+    
+    # Detect playing patterns
+    pattern_detection: true

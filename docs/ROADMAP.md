@@ -4,10 +4,12 @@
 
 ## Project Status
 
-**Current Version**: v0.3.2 (Phase 3.2+ Enhanced Benchmarking Complete)  
-**Previous Versions**: v0.3.1 (Quality & Testing), v0.3.0 (Stockfish + Phase 3.1), v0.2.0 (Multi-Provider LLM)  
-**Last Updated**: February 3, 2026  
-**Tests**: 264 passing ✅
+**Current Version**: v0.5.0 (LLM vs LLM Tournament System) 🔵 In Development  
+**Previous Versions**: v0.4.0 (Interactive CLI), v0.3.2 (Enhanced Benchmarking), v0.3.1 (Quality & Testing), v0.3.0 (Stockfish + Phase 3.1), v0.2.0 (Multi-Provider LLM)  
+**Last Updated**: April 3, 2026  
+**Tests**: 933 passing ✅
+
+> **Note (April 2026)**: v0.5.0 now focuses on **LLM vs LLM Tournament System**. Web Interface moved to v0.6.0.
 
 ---
 
@@ -300,7 +302,119 @@ Else if move is sound OR creates complications:
 
 ---
 
-## v0.5.0 Timeline - Web Interface & API (Month 3)
+## v0.5.0 Timeline - LLM vs LLM Tournament System (April 2026)
+
+> **Note**: Roadmap revised April 2026. Web Interface (previously v0.5.0) moved to v0.6.0.
+
+### Overview
+
+Transform CAISSA into a **multi-agent competitive chess arena** where different LLM providers compete head-to-head in organized tournaments.
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Match Engine** | Single-game conductor with move prompting and validation |
+| **Tournament Formats** | Round-robin, Swiss, knockout, arena modes |
+| **ELO Ratings** | Track LLM chess strength over time |
+| **Live Commentary** | Third LLM narrates games in real-time |
+| **Analytics** | Style fingerprints, provider metrics, performance insights |
+
+### Phase 1: Match Engine (Week 1-2)
+
+**Core Match Functionality** (`core/match_engine.py`):
+- [ ] TournamentPlayer dataclass with provider, ELO, persona
+- [ ] MatchEngine class for 1v1 games
+- [ ] Move prompting with position context
+- [ ] Move response parsing (SAN extraction)
+- [ ] Illegal move handling (3 attempts → forfeit)
+- [ ] Time control enforcement (bullet/blitz/rapid/classical)
+- [ ] Game termination detection (checkmate, stalemate, draws)
+- [ ] MatchResult dataclass with full metadata
+
+**Unit Tests**:
+- [ ] test_match_engine.py (move prompting, parsing, illegal handling)
+
+### Phase 2: Tournament System (Week 2-3)
+
+**Tournament Orchestrator** (`core/tournament.py`):
+- [ ] TournamentConfig dataclass
+- [ ] Tournament class with async run()
+- [ ] Round-robin pairing algorithm
+- [ ] Swiss pairing algorithm
+- [ ] Knockout bracket generation
+- [ ] Standings calculation with tiebreaks
+- [ ] Tournament persistence (resume interrupted)
+
+**ELO System** (`core/elo_calculator.py`):
+- [ ] Standard FIDE ELO formula
+- [ ] Rating history tracking
+- [ ] Initial ratings per provider tier
+
+**Unit Tests**:
+- [ ] test_tournament.py (pairings, standings, ELO)
+
+### Phase 3: Live Commentary (Week 3)
+
+**Commentary Engine** (`core/commentary.py`):
+- [ ] LiveCommentator class
+- [ ] Move-by-move commentary generation
+- [ ] Critical moment detection (eval swings)
+- [ ] Multiple commentary styles (GM, dramatic, educational)
+- [ ] Postgame summary generation
+
+**Unit Tests**:
+- [ ] test_commentary.py
+
+### Phase 4: Analytics & Export (Week 4)
+
+**Tournament Analytics** (`core/tournament_analytics.py`):
+- [ ] Style fingerprint analysis
+- [ ] Illegal move rate per provider
+- [ ] Average centipawn loss calculation
+- [ ] Move time statistics
+- [ ] Provider comparison metrics
+
+**Export**:
+- [ ] HTML tournament report generator
+- [ ] Markdown standings export
+- [ ] JSON full results export
+- [ ] PGN collection export
+
+### Phase 5: CLI & Configuration (Week 4-5)
+
+**New CLI Commands**:
+```bash
+caissa match --white <provider> --black <provider>   # Single match
+caissa tournament --format <format> --players <...>  # Tournament
+caissa arena --players <...> --duration <time>       # Arena mode
+caissa elo --list                                    # View ratings
+```
+
+**YAML Configuration**:
+- [ ] Tournament configuration schema
+- [ ] Player definitions with personas
+- [ ] Commentary settings
+- [ ] Output format options
+
+### Phase 6: Documentation & Testing (Week 5)
+
+**Documentation**:
+- [x] LLM_VS_LLM.md — Full tournament documentation
+- [x] ARCHITECTURE.md — Tournament system section added
+- [ ] README.md — Quick start for tournaments
+- [ ] CLI help text updates
+
+**Integration Tests**:
+- [ ] Full tournament end-to-end test
+- [ ] Multi-provider match test
+- [ ] Commentary integration test
+
+---
+
+## v0.6.0 Timeline - Web Interface & API (Month 4)
+
+> **Note**: Moved from v0.5.0 to accommodate LLM vs LLM Tournament feature.
 
 ### Phase 1: Backend Foundation (Week 1-2)
 
@@ -320,12 +434,18 @@ DELETE /api/v1/games/{id}       - Delete game
 GET  /api/v1/providers          - List available LLM providers
 GET  /api/v1/styles             - List generation styles
 GET  /api/v1/health             - Health check
+
+# NEW: Tournament endpoints
+POST /api/v1/tournaments        - Create tournament
+GET  /api/v1/tournaments/{id}   - Get tournament results
+WS   /ws/match/{id}             - Live match updates
 ```
 
 **WebSocket Endpoints**:
 ```
 WS /ws/generation/{task_id}     - Real-time generation progress
 WS /ws/analysis/{game_id}       - Live game analysis
+WS /ws/tournament/{id}          - Tournament live updates (NEW)
 ```
 
 ### Phase 2: Authentication & Security (Week 2)
@@ -361,6 +481,8 @@ WS /ws/analysis/{game_id}       - Live game analysis
 /games/[id]          - Game detail with replay
 /games/[id]/analysis - Move-by-move analysis
 /compare             - Provider comparison dashboard
+/tournaments         - Tournament list (NEW)
+/tournaments/[id]    - Live tournament view (NEW)
 /docs                - API documentation
 /auth/login          - Authentication
 /settings            - User preferences
@@ -422,7 +544,7 @@ services:
 
 ---
 
-## v1.0.0 Timeline (Month 4)
+## v1.0.0 Timeline (Month 5)
 
 ### Production-Ready Features
 
@@ -437,6 +559,7 @@ services:
 - [ ] Webhook notifications
 - [ ] Game sharing with short URLs
 - [ ] Embed widget for websites
+- [ ] Public tournament hosting
 
 **Documentation & Polish**:
 - [ ] Comprehensive API documentation

@@ -1,8 +1,115 @@
 # 📋 CAISSA Development TODO List
 
-**Last Updated**: March 4, 2026  
-**Current Version**: v0.4.0 (Interactive CLI & Configuration Overhaul)  
+**Last Updated**: April 3, 2026  
+**Current Version**: v0.5.0 (LLM vs LLM Tournament System) 🔵 In Development  
+**Previous Version**: v0.4.0 (Interactive CLI & Configuration Overhaul)  
 **Tests**: 933 passed, 13 skipped
+
+---
+
+## 🔵 v0.5.0 - LLM vs LLM Tournament System (In Progress)
+
+> **Target**: April 2026  
+> **Theme**: Multi-agent competitive chess arena
+
+### Phase 1: Match Engine (Week 1-2) ✅
+
+#### Core Match Functionality (`core/match_engine.py`)
+- [x] `TournamentPlayer` dataclass (name, provider, ELO, persona) — `core/tournament_player.py`
+- [x] `TimeControl` enum (bullet, blitz, rapid, classical, unlimited)
+- [x] `MatchEngine` class for 1v1 games
+- [x] Move prompting with position context & history
+- [x] Move response parsing (SAN extraction from LLM output)
+- [x] Illegal move handling (3 attempts → forfeit)
+- [x] Time control enforcement
+- [x] Game termination detection (checkmate, stalemate, draw rules)
+- [x] `MatchResult` dataclass with full metadata
+
+#### Unit Tests
+- [ ] `tests/test_match_engine.py`
+
+### Phase 2: Tournament System (Week 2-3) ✅
+
+#### Tournament Orchestrator (`core/tournament.py`)
+- [x] `TournamentFormat` enum (round_robin, swiss, knockout, arena)
+- [x] `TournamentConfig` dataclass
+- [x] `Tournament` class with async `run()`
+- [x] Round-robin pairing algorithm (circle method)
+- [x] Swiss pairing algorithm (by score)
+- [x] Knockout bracket generation
+- [x] Standings calculation with tiebreaks (Sonneborn-Berger, Buchholz, wins)
+- [x] Tournament persistence (JSON + Markdown export)
+- [x] `TournamentResult` dataclass
+
+#### ELO System (`core/elo_calculator.py`)
+- [x] Standard FIDE ELO formula (K=32)
+- [x] `EloLeaderboard` class with rating history
+- [x] K-factor strategies (Fixed, FIDE, USCF, Dynamic, Provisional)
+- [x] Performance rating calculation
+- [ ] CLI: `caissa elo --list`
+
+#### Unit Tests
+- [ ] `tests/test_tournament.py`
+- [ ] `tests/test_elo_calculator.py`
+
+### Phase 3: Live Commentary (Week 3) ✅
+
+#### Commentary Engine (`core/commentary.py`)
+- [x] `CommentaryStyle` enum (grandmaster, dramatic, educational, humorous, poetic, etc.)
+- [x] `LiveCommentator` class
+- [x] Move-by-move commentary generation
+- [x] Critical moment detection (configurable threshold)
+- [x] Postgame summary generation
+- [x] Halftime report generation
+- [x] Player comparison analysis
+- [x] Move prediction feature
+- [x] `MultiCommentatorPanel` for broadcast-style commentary
+
+#### Unit Tests
+- [ ] `tests/test_commentary.py`
+
+### Phase 4: Analytics & Export (Week 4) ✅
+
+#### Tournament Analytics (`core/tournament_analytics.py`)
+- [x] `StyleFingerprint` dataclass for playing pattern analysis
+- [x] `ProviderMetrics` class with instruction-following scores
+- [x] Style fingerprint analysis (opening preferences, tactics frequency)
+- [x] Illegal move rate per provider
+- [x] Average centipawn loss calculation
+- [x] Move time statistics
+- [x] Provider comparison metrics & rankings
+- [x] `TournamentAnalytics` class with reporting
+
+#### Export Formats
+- [x] Markdown standings export (built into Tournament class)
+- [x] JSON full results export (built into Tournament class)
+- [x] PGN collection export (all games)
+- [ ] HTML tournament report generator (interactive)
+
+### Phase 5: CLI & Configuration (Week 4-5)
+
+#### New Commands
+- [ ] `caissa match --white <p> --black <p>` — Single match
+- [ ] `caissa match --series <n>` — Best-of-N series
+- [ ] `caissa tournament --format <f>` — Full tournament
+- [ ] `caissa arena --duration <t>` — Arena mode
+- [ ] `caissa elo --list` — View ratings
+- [ ] `caissa elo --history <player>` — Rating history
+
+#### Configuration
+- [ ] Tournament YAML configuration schema
+- [ ] Player definitions with personas
+- [ ] Commentary settings
+- [ ] Output format options
+
+### Phase 6: Documentation (Week 5)
+
+- [x] `docs/LLM_VS_LLM.md` — Full tournament documentation
+- [x] `docs/ARCHITECTURE.md` — Tournament system section added
+- [x] `docs/ROADMAP.md` — v0.5.0 timeline added
+- [ ] `README.md` — Quick start for tournaments
+- [ ] CLI help text updates
+- [ ] Integration test suite
 
 ---
 
