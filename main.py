@@ -2934,10 +2934,13 @@ def interactive_tournament_old():
     print()
     print(f"  {C.BOLD}Export formats:{C.RESET}")
     export_formats = [
-        ("markdown", "Markdown (default)"),
-        ("html", "HTML"),
-        ("json", "JSON"),
-        ("pgn", "PGN (all games)"),
+        ("markdown", "Markdown (standings + crosstable)"),
+        ("html", "HTML (full report)"),
+        ("json", "JSON (structured data)"),
+        ("pgn_pretty", "PGN Pretty (all games in one file)"),
+        ("pgn_strict", "PGN Strict (all games in one file)"),
+        ("per_game_pgn", "Per-game PGN (individual files)"),
+        ("all", "All Formats"),
     ]
     for i, (_, desc) in enumerate(export_formats, 1):
         print(f"    {i}. {desc}")
@@ -3061,10 +3064,13 @@ def _execute_tournament(name: str, format_name: str, provider_names: List[str], 
         output_dir = Path("tournaments") / name.replace(" ", "_").lower()
         
         # Map user selection to export formats
-        format_list = [export_format]
-        # Always include json for ELO tracking
-        if "json" not in format_list:
-            format_list.append("json")
+        if export_format == "all":
+            format_list = ["markdown", "html", "json", "pgn_pretty", "pgn_strict", "per_game_pgn"]
+        else:
+            format_list = [export_format]
+            # Always include json for ELO tracking
+            if "json" not in format_list:
+                format_list.append("json")
         
         exported = export_tournament(result, str(output_dir), formats=format_list)
         

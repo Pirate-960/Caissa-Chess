@@ -53,6 +53,7 @@ class TournamentExportConfig(ExportConfig):
     # Collection
     collection_separate_files: bool = False  # True = one PGN per game
     collection_include_index: bool = True
+    collection_pretty_pgn: bool = True  # True = use GameExporter.export_pgn()
     
     # HTML Report
     html_tournament_template: str = "default"
@@ -286,7 +287,7 @@ class TournamentExporter:
     # PGN EXPORTS
     # =========================================================================
     
-    def export_all_games_pgn(self, filepath: Optional[str] = None) -> str:
+    def export_all_games_pgn(self, filepath: Optional[str] = None, pretty: bool = True) -> str:
         """
         Export all tournament games as a single PGN collection.
         
@@ -294,6 +295,7 @@ class TournamentExporter:
         
         Args:
             filepath: Optional path to save file
+            pretty: Whether to use pretty PGN format (default: True)
         
         Returns:
             str: Complete PGN collection
@@ -305,12 +307,12 @@ class TournamentExporter:
             pgn_parts.append(f"; === Game {i}: {match.white.name} vs {match.black.name} ===")
             pgn_parts.append("")
             
-            # Use existing PGN from match
-            if match.pgn:
-                pgn_parts.append(match.pgn)
+            # Use MatchExporter to get the PGN
+            exporter = MatchExporter(match, include_elo=True)
+            if pretty:
+                pgn_parts.append(exporter.export_pgn())
             else:
-                # Generate minimal PGN if not available
-                pgn_parts.append(self._generate_minimal_pgn(match))
+                pgn_parts.append(exporter.export_pgn_strict())
             
             pgn_parts.append("")
             pgn_parts.append("")
@@ -319,10 +321,46 @@ class TournamentExporter:
         
         if filepath:
             Path(filepath).write_text(content, encoding="utf-8")
-            logger.info(f"All games exported to {filepath}")
+            logger.info(f"All games exported to {filepath} (pretty={pretty})")
         
         return content
-    
+
+    def export_per_game_pgn(self, output_dir: str, pretty: bool = True) -> List[str]:
+        """
+        Export each tournament game as an individual PGN file.
+        
+        Args:
+            output_dir: Directory to save individual PGN files
+            pretty: Whether to use pretty PGN format (default: True)
+            
+        Returns:
+            List of paths to exported files
+        """
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        exported_files = []
+        
+        for i, match in enumerate(self.result.matches, 1):
+            # Build filename
+            white_name = match.white.name.replace(" ", "_")
+            black_name = match.black.name.replace(" ", "_")
+            filename = f"game_{i:03d}_{white_name}_vs_{black_name}.pgn"
+            filepath = output_path / filename
+            
+            # Use MatchExporter to get the PGN
+            exporter = MatchExporter(match, include_elo=True)
+            if pretty:
+                content = exporter.export_pgn()
+            else:
+                content = exporter.export_pgn_strict()
+            
+            filepath.write_text(content, encoding="utf-8")
+            exported_files.append(str(filepath))
+            
+        logger.info(f"Exported {len(exported_files)} individual games to {output_dir}")
+        return exported_files
+
     def export_player_games_pgn(
         self,
         player_id: str,
@@ -678,10 +716,20 @@ def export_tournament(
         exporter.export_html_report(str(path))
         exported["html"] = str(path)
     
-    if "pgn" in formats:
+    if "pgn" in formats or "pgn_pretty" in formats:
         path = output_path / "all_games.pgn"
-        exporter.export_all_games_pgn(str(path))
-        exported["pgn"] = str(path)
+        exporter.export_all_games_pgn(str(path), pretty=True)
+        exported["pgn_pretty"] = str(path)
+
+    if "pgn_strict" in formats:
+        path = output_path / "all_games_strict.pgn"
+        exporter.export_all_games_pgn(str(path), pretty=False)
+        exported["pgn_strict"] = str(path)
+
+    if "per_game_pgn" in formats:
+        games_dir = output_path / "games"
+        exporter.export_per_game_pgn(str(games_dir), pretty=True)
+        exported["per_game_pgn"] = str(games_dir)
     
     logger.info(f"Tournament exported to {output_dir}: {list(exported.keys())}")
     return exported
