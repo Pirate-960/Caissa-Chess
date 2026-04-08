@@ -5,11 +5,17 @@ Main CLI entry point.
 
 from __future__ import annotations
 
+import logging
 import sys
+from pathlib import Path
 
 import click
 from rich.console import Console
 from rich.table import Table
+
+# Setup basic logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 console = Console()
 
@@ -138,6 +144,102 @@ def generate(
         pgn = builder.build_pgn(game.moves)
         builder.save(output, pgn)
         console.print(f"[green]Saved to {output}[/green]")
+
+
+@cli.command()
+@click.option("--name", "-n", default="CAISSA Tournament", help="Tournament name")
+@click.option("--rounds", "-r", default=1, help="Number of rounds")
+@click.option("--style", "-s", default="balanced", help="Playing style")
+@click.option("--output-dir", "-o", default="tournament_output", help="Directory for exported files")
+@click.option(
+    "--format",
+    "-f",
+    type=click.Choice(["json", "csv", "pgn", "per-game-pgn", "md", "html", "all"]),
+    default="all",
+    help="Export format",
+)
+def tournament(
+    name: str,
+    rounds: int,
+    style: str,
+    output_dir: str,
+    format: str,
+) -> None:
+    """Run a multi-agent tournament and export results."""
+    from match_engine import Tournament, TimeControl
+    from core.llm_provider import MockProvider
+    from export.tournament_exporter import TournamentExporter, TournamentResult, TournamentStanding
+    from aesthetic.beauty_eval import BeautyEvaluator
+
+    console.print(f"[bold cyan]Starting Tournament: {name}[/bold cyan]")
+    
+    # Setup tournament
+    tourney = Tournament(name=name, rounds=rounds, style=style, time_control=TimeControl.BLITZ)
+    
+    # Add some mock players for demonstration
+    # In a real scenario, these would be configured via CLI or config file
+    tourney.add_player("Grandmaster Mock", MockProvider(), elo=2800)
+    tourney.add_player("Agressive Bot", MockProvider(), elo=2400)
+    tourney.add_player("Positional Bot", MockProvider(), elo=2300)
+
+    with console.status("Running matches..."):
+        results = tourney.run_round_robin()
+
+    tourney.print_standings()
+
+    # Prepare exporter
+    exporter = TournamentExporter(tournament_name=name)
+    evaluator = BeautyEvaluator()
+
+    # Add results to exporter
+    for i, res in enumerate(results, 1):
+        beauty = evaluator.evaluate_game(res.moves)
+        exporter.add_result(TournamentResult(
+            round_number=(i // len(tourney.players)) + 1,
+            white=res.white_player,
+            black=res.black_player,
+            result=res.result.value,
+            white_elo=res.white_elo_before,
+            black_elo=res.black_elo_before,
+            move_count=len(res.moves),
+            aesthetic_score=beauty.overall,
+            pgn=res.pgn,
+            time_control="BLITZ"
+        ))
+
+    # Add standings to exporter
+    for i, p in enumerate(tourney.get_standings(), 1):
+        exporter.add_standing(TournamentStanding(
+            rank=i,
+            player=p.name,
+            elo=p.elo,
+            wins=p.wins,
+            losses=p.losses,
+            draws=p.draws,
+            points=p.points,
+            games_played=p.games_played
+        ))
+
+    # Export based on choice
+    out_path = Path(output_dir)
+    out_path.mkdir(parents=True, exist_ok=True)
+
+    console.print(f"\n[cyan]Exporting results to {output_dir}...[/cyan]")
+
+    if format == "json" or format == "all":
+        exporter.export_json(out_path / "tournament.json")
+    if format == "csv" or format == "all":
+        exporter.export_csv(out_path / "tournament.csv")
+    if format == "pgn" or format == "all":
+        exporter.export_pgn_bundle(out_path / "tournament.pgn")
+    if format == "per-game-pgn" or format == "all":
+        exporter.export_per_game_pgn(out_path / "games")
+    if format == "md" or format == "all":
+        exporter.export_markdown(out_path / "report.md")
+    if format == "html" or format == "all":
+        exporter.export_html(out_path / "report.html")
+
+    console.print("[bold green]Tournament complete and results exported![/bold green]")
 
 
 if __name__ == "__main__":
