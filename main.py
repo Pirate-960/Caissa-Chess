@@ -2856,7 +2856,7 @@ def _execute_tournament_v2(config):
         
         # Determine formats
         if config.export_format == "all":
-            format_list = ["html", "markdown", "json", "pgn"]
+            format_list = ["html", "markdown", "json", "pgn_pretty", "pgn_strict", "per_game_pgn"]
         else:
             format_list = [config.export_format]
             # Always include json for ELO tracking
