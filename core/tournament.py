@@ -8,7 +8,7 @@ Author: CAISSA Team
 Version: 0.5.0
 """
 
-import asyncio
+import chess
 import json
 import logging
 import random
@@ -20,7 +20,7 @@ from typing import Optional, List, Tuple, Dict, Any, Set
 
 from core.tournament_player import TournamentPlayer, TimeControl, PlayerStatus
 from core.match_engine import MatchEngine, MatchResult
-from core.elo_calculator import GameResult, EloCalculator, EloLeaderboard
+from core.elo_calculator import GameResult, EloLeaderboard
 
 
 logger = logging.getLogger(__name__)
@@ -710,12 +710,15 @@ class Tournament:
         """
         logger.info(f"Playing: {white.name} vs {black.name}")
         
+        # Use standard starting position if no custom FEN specified
+        starting_fen = self.config.starting_fen if self.config.starting_fen else chess.STARTING_FEN
+        
         engine = MatchEngine(
             white=white,
             black=black,
             time_control=self.config.time_control,
             max_moves=self.config.max_moves,
-            starting_fen=self.config.starting_fen or "",
+            starting_fen=starting_fen,
         )
         
         result = await engine.play_match()

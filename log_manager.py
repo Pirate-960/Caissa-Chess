@@ -101,6 +101,9 @@ LOG_CATEGORIES: Dict[str, Dict[str, str]] = {
 _LEGACY_MODULE_MAP: Dict[str, str] = {
     "core.generator":                   "generation",
     "core.llm_provider":                "generation",
+    "core.match_engine":                "validation",  # LLM vs LLM match validation
+    "core.tournament":                  "generation",  # Tournament orchestration
+    "core.match_analyzer":              "engine",      # Post-match analysis
     "core.prompt_manager":              "prompts",
     "core.board_state":                 "validation",
     "core.provider_factory":            "config",
@@ -109,6 +112,7 @@ _LEGACY_MODULE_MAP: Dict[str, str] = {
     "export.pgn_builder":               "export",
     "export.game_exporter":             "export",
     "export.annotation_parser":         "export",
+    "export.tournament_exporter":       "export",      # Tournament exports
     "aesthetic.beauty_eval":            "aesthetic",
     "aesthetic.style_slider":           "aesthetic",
     "config_manager":                   "config",

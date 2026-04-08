@@ -460,6 +460,7 @@ class MatchEngine:
                 
                 if move not in self.board.legal_moves:
                     logger.warning(f"[{self.match_id}] {player.name} - Illegal move: '{parsed_move}' (attempt {attempt})")
+                    logger.info(f"[{self.match_id}] 🚫 VALIDATION FAILED - Move '{parsed_move}' not in legal moves for {color}")
                     logger.debug(f"[{self.match_id}] Legal moves were: {[self.board.san(m) for m in list(self.board.legal_moves)[:10]]}")
                     self._record_illegal_attempt(color)
                     continue
@@ -472,6 +473,7 @@ class MatchEngine:
                 is_promotion = move.promotion is not None
                 
                 logger.debug(f"[{self.match_id}] {player.name} - Valid move: {san} ({think_time:.2f}s, attempt {attempt})")
+                logger.info(f"[{self.match_id}] ✅ VALIDATION PASSED - {player.name} ({color}) plays {san}")
                 
                 self.board.push(move)
                 
@@ -548,6 +550,7 @@ class MatchEngine:
         
         # Opponent info
         opponent = self.black if self.board.turn == chess.WHITE else self.white
+        opponent_color = "Black" if self.board.turn == chess.WHITE else "White"
         
         # Build prompt
         prompt = f"""You are playing a chess game as {color}.
@@ -558,7 +561,7 @@ MOVE HISTORY: {history}
 
 MOVE NUMBER: {move_number}
 YOUR COLOR: {color}
-OPPONENT: {opponent.name}
+OPPONENT: {opponent.name} ({opponent_color})
 
 LEGAL MOVES: {legal_moves_str}
 {persona_text}

@@ -713,31 +713,73 @@ class MatchExporter(GameExporter):
         match_result: Any,  # MatchResult from match_engine
         config: Optional[Any] = None,  # ExportConfig
         include_elo: bool = True,
+        match_analysis: Optional[Any] = None,  # MatchAnalysis from match_analyzer (NEW)
     ):
         """
         Args:
             match_result: MatchResult from MatchEngine.play_match()
             config: ExportConfig (uses defaults if None)
             include_elo: Include ELO change information in output
+            match_analysis: MatchAnalysis from MatchAnalyzer (optional, adds beauty scores, commentary, annotations)
+        
+        Raises:
+            ValueError: If match result is empty/invalid (forfeit, timeout with 0 moves)
         """
         from export.annotation_parser import ParsedGame, ParsedMove
         from export.game_exporter import ExportConfig
+        from core.match_engine import TerminationReason
         
         self.match_result = match_result
         self.include_elo = include_elo
+        self.match_analysis = match_analysis  # Store analysis for enhanced export
+        
+        # CRITICAL FIX: Validate match is exportable
+        if not match_result.moves or len(match_result.moves) == 0:
+            termination = match_result.termination.value if hasattr(match_result.termination, 'value') else str(match_result.termination)
+            raise ValueError(
+                f"Cannot export empty match {match_result.match_id} "
+                f"(termination: {termination}, moves: {len(match_result.moves)}). "
+                f"Match likely forfeited or timed out before any moves were played."
+            )
         
         # Convert MatchResult to ParsedGame for base class
         parsed_moves = []
-        for move in match_result.moves:
-            parsed_move = ParsedMove(
-                san=move.san,
-                move_number=move.move_number,
-                is_white=(move.color == "white"),
-                comment=f"[{move.think_time:.1f}s]" if move.think_time else "",
-                nags=[],  # LLM matches don't have NAGs
-                evaluation=move.evaluation,
-                clock_time=f"{move.think_time:.1f}" if move.think_time else None,
-            )
+        for i, move in enumerate(match_result.moves):
+            # Check if we have analysis data for this move
+            if match_analysis and i < len(match_analysis.move_annotations):
+                annotation = match_analysis.move_annotations[i]
+                comment_parts = []
+                
+                # Add think time
+                if move.think_time:
+                    comment_parts.append(f"{move.think_time:.1f}s")
+                
+                # Add commentary from analysis
+                if annotation.comment:
+                    comment_parts.append(annotation.comment)
+                
+                combined_comment = " - ".join(comment_parts) if comment_parts else ""
+                
+                parsed_move = ParsedMove(
+                    san=move.san,
+                    move_number=move.move_number,
+                    is_white=(move.color == "white"),
+                    comment=combined_comment,
+                    nags=annotation.nags,  # Use NAGs from analysis
+                    evaluation=annotation.evaluation,  # Use Stockfish eval from analysis
+                    clock_time=f"{move.think_time:.1f}" if move.think_time else None,
+                )
+            else:
+                # Fallback: no analysis data
+                parsed_move = ParsedMove(
+                    san=move.san,
+                    move_number=move.move_number,
+                    is_white=(move.color == "white"),
+                    comment=f"[{move.think_time:.1f}s]" if move.think_time else "",
+                    nags=[],
+                    evaluation=move.evaluation,
+                    clock_time=f"{move.think_time:.1f}" if move.think_time else None,
+                )
             parsed_moves.append(parsed_move)
         
         # Build headers for ParsedGame
@@ -784,10 +826,17 @@ class MatchExporter(GameExporter):
             )
         
         # Initialize parent with ParsedGame
+        # Use beauty score from analysis if available, fallback to match_result
+        beauty_score = None
+        if match_analysis:
+            beauty_score = match_analysis.beauty_score
+        elif hasattr(match_result, 'beauty_score'):
+            beauty_score = match_result.beauty_score
+        
         super().__init__(
             game=parsed_game,
             config=config,
-            beauty_score=match_result.beauty_score if hasattr(match_result, 'beauty_score') else None,
+            beauty_score=beauty_score,
             style_name="LLM Tournament",
         )
     
@@ -963,6 +1012,133 @@ class MatchExporter(GameExporter):
             parts.append('  </p>')
         parts.append('</div>')
         
+        # ═════════════════════════════════════════════════════════════════════
+        # POST-MATCH ANALYSIS SECTION (if available)
+        # ═════════════════════════════════════════════════════════════════════
+        if self.match_analysis:
+            ma = self.match_analysis
+            
+            # Beauty Score & Metrics
+            parts.append('<div class="analysis-beauty" style="background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin:24px 0;">')
+            parts.append('  <h3 style="margin:0 0 16px 0; color:var(--accent); font-size:1.3em;">✨ Beauty & Quality Analysis</h3>')
+            parts.append('  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px;">')
+            
+            # Beauty score bar
+            beauty_pct = min(100, ma.beauty_score)
+            beauty_color = '#4ade80' if beauty_pct >= 70 else ('#fbbf24' if beauty_pct >= 40 else '#f87171')
+            parts.append('    <div>')
+            parts.append('      <strong>Beauty Score</strong>')
+            parts.append(f'      <div style="background:var(--bg); border-radius:8px; height:32px; margin-top:8px; position:relative; overflow:hidden;">')
+            parts.append(f'        <div style="background:{beauty_color}; width:{beauty_pct}%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:white;">')
+            parts.append(f'          {ma.beauty_score:.1f}/100')
+            parts.append('        </div>')
+            parts.append('      </div>')
+            parts.append('    </div>')
+            
+            # Complexity score
+            complexity_pct = min(100, ma.complexity_score)
+            parts.append('    <div>')
+            parts.append('      <strong>Complexity</strong>')
+            parts.append(f'      <div style="background:var(--bg); border-radius:8px; height:32px; margin-top:8px; position:relative; overflow:hidden;">')
+            parts.append(f'        <div style="background:#3b82f6; width:{complexity_pct}%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:white;">')
+            parts.append(f'          {ma.complexity_score:.1f}/100')
+            parts.append('        </div>')
+            parts.append('      </div>')
+            parts.append('    </div>')
+            
+            # Drama score
+            drama_pct = min(100, ma.drama_score)
+            parts.append('    <div>')
+            parts.append('      <strong>Drama</strong>')
+            parts.append(f'      <div style="background:var(--bg); border-radius:8px; height:32px; margin-top:8px; position:relative; overflow:hidden;">')
+            parts.append(f'        <div style="background:#ec4899; width:{drama_pct}%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:white;">')
+            parts.append(f'          {ma.drama_score:.1f}/100')
+            parts.append('        </div>')
+            parts.append('      </div>')
+            parts.append('    </div>')
+            
+            parts.append('  </div>')
+            parts.append('</div>')
+            
+            # Accuracy Metrics
+            parts.append('<div class="analysis-accuracy" style="background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin:24px 0;">')
+            parts.append('  <h3 style="margin:0 0 16px 0; color:var(--accent); font-size:1.3em;">🎯 Accuracy Analysis</h3>')
+            parts.append('  <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">')
+            
+            # White accuracy
+            white_acc = min(100, ma.white_accuracy)
+            white_acc_color = '#4ade80' if white_acc >= 80 else ('#fbbf24' if white_acc >= 60 else '#f87171')
+            parts.append('    <div>')
+            parts.append('      <h4 style="margin:0 0 8px 0;">⚪ White Accuracy</h4>')
+            parts.append('      <ul style="margin:0; padding-left:20px; line-height:1.8;">')
+            parts.append(f'        <li><strong>Accuracy:</strong> <span style="color:{white_acc_color}; font-weight:bold;">{ma.white_accuracy:.1f}%</span></li>')
+            parts.append(f'        <li><strong>Avg CPL:</strong> {ma.white_avg_centipawn_loss:.1f}</li>')
+            parts.append('      </ul>')
+            parts.append('    </div>')
+            
+            # Black accuracy
+            black_acc = min(100, ma.black_accuracy)
+            black_acc_color = '#4ade80' if black_acc >= 80 else ('#fbbf24' if black_acc >= 60 else '#f87171')
+            parts.append('    <div>')
+            parts.append('      <h4 style="margin:0 0 8px 0;">⚫ Black Accuracy</h4>')
+            parts.append('      <ul style="margin:0; padding-left:20px; line-height:1.8;">')
+            parts.append(f'        <li><strong>Accuracy:</strong> <span style="color:{black_acc_color}; font-weight:bold;">{ma.black_accuracy:.1f}%</span></li>')
+            parts.append(f'        <li><strong>Avg CPL:</strong> {ma.black_avg_centipawn_loss:.1f}</li>')
+            parts.append('      </ul>')
+            parts.append('    </div>')
+            
+            parts.append('  </div>')
+            parts.append('</div>')
+            
+            # Critical Moments
+            if ma.critical_moments:
+                parts.append('<div class="critical-moments" style="background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin:24px 0;">')
+                parts.append('  <h3 style="margin:0 0 16px 0; color:var(--accent); font-size:1.3em;">🔥 Critical Moments</h3>')
+                
+                for moment in ma.critical_moments[:10]:  # Show top 10 critical moments
+                    moment_icon = {
+                        "blunder": "💥",
+                        "brilliancy": "✨",
+                        "turning_point": "🔄",
+                        "missed_win": "⚠️"
+                    }.get(moment.moment_type, "📌")
+                    
+                    moment_color = {
+                        "blunder": "#f87171",
+                        "brilliancy": "#4ade80",
+                        "turning_point": "#fbbf24",
+                        "missed_win": "#fb923c"
+                    }.get(moment.moment_type, "#94a3b8")
+                    
+                    parts.append(f'  <div style="border-left:4px solid {moment_color}; padding:12px; margin-bottom:12px; background:var(--bg);">')
+                    parts.append(f'    <div style="font-weight:bold; color:{moment_color};">{moment_icon} Move {moment.move_number}: {html_lib.escape(moment.san)} - {moment.moment_type.replace("_", " ").title()}</div>')
+                    parts.append(f'    <div style="margin-top:4px; color:var(--fg-muted); font-size:0.95em;">{html_lib.escape(moment.commentary)}</div>')
+                    
+                    if moment.eval_swing > 0:
+                        parts.append(f'    <div style="margin-top:4px; font-size:0.9em; color:var(--fg-muted);">Evaluation: {moment.eval_before:.1f} → {moment.eval_after:.1f} (swing: {moment.eval_swing:.0f} cp)</div>')
+                    
+                    parts.append('  </div>')
+                
+                parts.append('</div>')
+            
+            # Game Narrative
+            if ma.narrative:
+                parts.append('<div class="game-narrative" style="background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin:24px 0;">')
+                parts.append('  <h3 style="margin:0 0 16px 0; color:var(--accent); font-size:1.3em;">📖 Game Story</h3>')
+                parts.append(f'  <p style="margin:0 0 12px 0; line-height:1.6;">{html_lib.escape(ma.narrative.summary)}</p>')
+                
+                if ma.narrative.winner_reason:
+                    parts.append(f'  <p style="margin:0; font-style:italic; color:var(--fg-muted);">{html_lib.escape(ma.narrative.winner_reason)}</p>')
+                
+                parts.append('</div>')
+            
+            # Analysis metadata
+            parts.append('<div class="analysis-meta" style="padding:12px; margin:24px 0; color:var(--fg-muted); font-size:0.9em; text-align:center; border-top:1px solid var(--border);">')
+            parts.append(f'  ℹ️ Analysis performed in {ma.analysis_time:.2f}s using Stockfish depth {ma.stockfish_depth}')
+            if ma.commentary_enabled:
+                parts.append(' with LLM commentary')
+            parts.append('</div>')
+        
         return '\n'.join(parts)
     
     # =========================================================================
@@ -1107,6 +1283,7 @@ def export_match(
     output_dir: str,
     formats: Optional[List[str]] = None,
     include_elo: bool = True,
+    match_analysis: Optional[Any] = None,
 ) -> Dict[str, str]:
     """
     Export a single LLM vs LLM match using MatchExporter (extends GameExporter).
@@ -1120,11 +1297,26 @@ def export_match(
         formats: List of formats to export (default: ["pgn"])
                  Supported: "pgn", "markdown", "html", "json"
         include_elo: Include ELO change information in output
+        match_analysis: Optional MatchAnalysis from MatchAnalyzer (adds beauty scores, commentary)
     
     Returns:
         Dict mapping format name to file path
+    
+    Raises:
+        ValueError: If match result is empty/invalid (forfeit, timeout with 0 moves)
     """
     from export.game_exporter import ExportConfig
+    from core.match_engine import TerminationReason
+    
+    # CRITICAL FIX: Validate match before attempting export
+    if not match_result.moves or len(match_result.moves) == 0:
+        termination = match_result.termination.value if hasattr(match_result.termination, 'value') else str(match_result.termination)
+        logger.warning(
+            f"Skipping export of empty match {match_result.match_id} "
+            f"(termination: {termination}, winner: {match_result.result.value})"
+        )
+        # Return empty dict instead of crashing
+        return {}
     
     formats = formats or ["pgn"]
     output_path = Path(output_dir)
@@ -1140,11 +1332,16 @@ def export_match(
         html_include_styles=True,
     )
     
-    exporter = MatchExporter(
-        match_result=match_result,
-        config=config,
-        include_elo=include_elo,
-    )
+    try:
+        exporter = MatchExporter(
+            match_result=match_result,
+            config=config,
+            include_elo=include_elo,
+            match_analysis=match_analysis,  # CRITICAL FIX: Pass analysis through
+        )
+    except ValueError as e:
+        logger.error(f"Failed to create MatchExporter: {e}")
+        return {}
     
     exported = {}
     base_name = f"match_{match_result.white.name}_vs_{match_result.black.name}"

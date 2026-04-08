@@ -362,6 +362,114 @@ class AdvancedConfig:
 
 
 # =============================================================================
+# TOURNAMENT CONFIGURATION (v0.5.0)
+# =============================================================================
+
+@dataclass
+class TournamentEloConfig:
+    """ELO rating system configuration for tournaments."""
+    initial_rating: int = 1500
+    k_factor_strategy: str = "fide"  # fixed | fide | uscf | dynamic | provisional
+    k_factor: int = 32
+    k_factor_new: int = 40
+    k_factor_established: int = 20
+    k_factor_master: int = 10
+    rating_floor: int = 100
+    rating_ceiling: int = 3500
+    persist_ratings: bool = True
+    ratings_file: str = "tournaments/elo_ratings.json"
+
+
+@dataclass
+class TournamentMatchConfig:
+    """Match engine settings for tournaments."""
+    max_moves: int = 500
+    max_retries: int = 3
+    allow_draws: bool = True
+    shuffle_colors: bool = True
+    detect_opening: bool = True
+
+
+@dataclass
+class TournamentCommentaryConfig:
+    """Live commentary settings for tournaments."""
+    enabled: bool = False
+    style: str = "grandmaster"
+    depth: str = "key_moments"
+    multi_panel: bool = False
+    panel_styles: List[str] = field(default_factory=lambda: ["grandmaster", "enthusiastic"])
+
+
+@dataclass
+class TournamentOutputConfig:
+    """Tournament output and export settings."""
+    output_dir: str = "tournaments"
+    auto_export: List[str] = field(default_factory=lambda: ["markdown", "json", "pgn"])
+    include_crosstable: bool = True
+    include_elo_changes: bool = True
+    html_report: bool = True
+
+
+@dataclass
+class TournamentArenaConfig:
+    """Arena mode tournament settings."""
+    duration_minutes: int = 60
+    arena_win_points: int = 2
+    arena_draw_points: int = 1
+    allow_berserk: bool = False
+    berserk_bonus: int = 1
+
+
+@dataclass
+class TournamentAnalyticsConfig:
+    """Tournament analytics settings."""
+    style_fingerprinting: bool = True
+    provider_metrics: bool = True
+    decision_quality: bool = True
+    pattern_detection: bool = True
+
+
+@dataclass
+class TournamentConfig:
+    """LLM vs LLM Tournament Configuration (v0.5.0)."""
+    # Default settings
+    default_format: str = "round_robin"
+    default_rounds: int = 0
+    default_time_control: str = "rapid"
+    
+    # Time per move for each control type
+    time_per_move: Dict[str, int] = field(default_factory=lambda: {
+        "bullet": 5,
+        "blitz": 15,
+        "rapid": 30,
+        "classical": 60,
+        "correspondence": 3600,
+        "unlimited": 0
+    })
+    
+    # Scoring system
+    win_points: float = 1.0
+    draw_points: float = 0.5
+    loss_points: float = 0.0
+    bye_points: float = 1.0
+    
+    # Tiebreak methods
+    tiebreak_methods: List[str] = field(default_factory=lambda: ["h2h", "sb", "wins"])
+    
+    # Player personas
+    enable_personas: bool = True
+    default_persona: Optional[str] = None
+    
+    # Nested configs
+    elo: TournamentEloConfig = field(default_factory=TournamentEloConfig)
+    match: TournamentMatchConfig = field(default_factory=TournamentMatchConfig)
+    commentary: TournamentCommentaryConfig = field(default_factory=TournamentCommentaryConfig)
+    output: TournamentOutputConfig = field(default_factory=TournamentOutputConfig)
+    arena: TournamentArenaConfig = field(default_factory=TournamentArenaConfig)
+    analytics: TournamentAnalyticsConfig = field(default_factory=TournamentAnalyticsConfig)
+
+
+# =============================================================================
 # MASTER CONFIG
 # =============================================================================
 
@@ -378,6 +486,7 @@ class CaissaConfig:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     advanced: AdvancedConfig = field(default_factory=AdvancedConfig)
     batch: BatchDefaults = field(default_factory=BatchDefaults)
+    tournament: TournamentConfig = field(default_factory=TournamentConfig)
 
     # Computed paths
     project_root: Path = field(default_factory=lambda: PROJECT_ROOT)
@@ -557,6 +666,7 @@ def _build_config_from_dict(data: dict) -> CaissaConfig:
         "logging": ("logging", LoggingConfig),
         "advanced": ("advanced", AdvancedConfig),
         "batch": ("batch", BatchDefaults),
+        "tournament": ("tournament", TournamentConfig),
     }
     
     for yaml_key, (attr_name, dc_class) in section_map.items():
