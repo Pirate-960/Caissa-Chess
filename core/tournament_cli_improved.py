@@ -208,7 +208,6 @@ class TournamentConfig:
     time_control: str
     export_format: str
     enable_analysis: bool = True
-    enable_commentary: bool = True  # Added commentary flag
     enable_parallel: bool = True  # NEW: Parallel match execution
     max_workers: int = 4  # NEW: Thread pool size
     output_dir: str = "tournaments/"
@@ -765,13 +764,11 @@ class ImprovedTournamentBuilder:
         print("="*60)
         
         formats = {
-            1: ("html", "HTML (full report) [RECOMMENDED]"),
-            2: ("markdown", "Markdown (standings + crosstable)"),
-            3: ("json", "JSON (structured data)"),
-            4: ("pgn_pretty", "PGN Pretty (all games in one file)"),
-            5: ("pgn_strict", "PGN Strict (all games in one file)"),
-            6: ("per_game_pgn", "Per-game PGN (individual files)"),
-            7: ("all", "ALL formats"),
+            1: ("html", "HTML [RECOMMENDED]"),
+            2: ("markdown", "Markdown"),
+            3: ("json", "JSON"),
+            4: ("pgn", "PGN (all games)"),
+            5: ("all", "ALL formats"),
         }
         
         print("\n  Options:")
@@ -779,10 +776,10 @@ class ImprovedTournamentBuilder:
             print(f"    {num}. {name}")
         print("    0. ← Back")
         
-        choice = self._prompt_with_back("Select export format", default=1, min_val=1, max_val=len(formats))
+        choice = self._prompt_with_back("Select export format", default=1, min_val=1, max_val=5)
         
         if choice == 0:
-            return "", True
+            return None, True
         
         self.config.export_format = formats[choice][0]
         return self.config.export_format, False
