@@ -551,7 +551,8 @@ Be {self.style.value} in your delivery."""
             raise ValueError("No provider configured for commentary")
         
         response = self.provider.generate(
-            prompt,
+            system_prompt=f"You are a chess commentator with a {self.style.value} style.",
+            user_prompt=prompt,
             temperature=self.temperature,
         )
         return response.strip()

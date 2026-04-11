@@ -130,6 +130,7 @@ class MatchResult:
     eco_code: str = ""
     prompt_variant: str = "A"
     prompt_trace: Dict[str, Any] = field(default_factory=dict)
+    forfeit_cause: Optional[str] = None
     
     @property
     def duration(self) -> float:
@@ -179,6 +180,7 @@ class MatchResult:
             "elo_change": self.elo_change.summary if self.elo_change else None,
             "prompt_variant": self.prompt_variant,
             "prompt_trace": self.prompt_trace,
+            "forfeit_cause": self.forfeit_cause,
         }
 
 
@@ -300,6 +302,7 @@ class MatchEngine:
         
         termination_reason = None
         game_result = GameResult.IN_PROGRESS
+        forfeit_cause: Optional[str] = None
         
         try:
             while not self._is_game_over():
@@ -311,7 +314,7 @@ class MatchEngine:
                 logger.info(f"[{self.match_id}] Move {move_number} - {current_player.name} ({color}) to play")
                 
                 # Get move from player
-                move_record = await self._get_player_move(current_player, color)
+                move_record, failure_cause = await self._get_player_move(current_player, color)
                 
                 if move_record is None:
                     # Player forfeited (exceeded retries)
@@ -320,7 +323,11 @@ class MatchEngine:
                     else:
                         game_result = GameResult.WHITE_WINS
                     termination_reason = TerminationReason.FORFEIT
-                    logger.warning(f"[{self.match_id}] {current_player.name} forfeited due to {self.max_retries} failed move attempts")
+                    forfeit_cause = failure_cause or "illegal"
+                    logger.warning(
+                        f"[{self.match_id}] {current_player.name} forfeited due to {self.max_retries} failed move attempts "
+                        f"(cause={forfeit_cause})"
+                    )
                     logger.info(f"[{self.match_id}] Match ended by forfeit - {self.black.name if color == 'white' else self.white.name} wins")
                     break
                 
@@ -426,6 +433,7 @@ class MatchEngine:
             commentary=self.commentary,
             prompt_variant=self.prompt_variant,
             prompt_trace=self.prompt_trace,
+            forfeit_cause=forfeit_cause,
         )
         
         return result
@@ -434,7 +442,7 @@ class MatchEngine:
         self,
         player: TournamentPlayer,
         color: str,
-    ) -> Optional[MoveRecord]:
+    ) -> Tuple[Optional[MoveRecord], Optional[str]]:
         """
         Get a valid move from a player.
         
@@ -445,7 +453,7 @@ class MatchEngine:
             color: "white" or "black"
         
         Returns:
-            MoveRecord if valid move obtained, None if forfeited
+            Tuple of (MoveRecord or None, failure_cause or None)
         """
         move_number = self.board.fullmove_number
         fen_before = self.board.fen()
@@ -467,7 +475,7 @@ class MatchEngine:
                 response = await self._call_llm(player, prompt)
                 
                 # Parse move from response
-                parsed_move = self._parse_move_response(response)
+                parsed_move = self._parse_move_response(response, board=self.board)
                 
                 think_time = time.time() - start_time
                 
@@ -516,21 +524,30 @@ class MatchEngine:
                     is_check=is_check,
                     is_capture=is_capture,
                     is_promotion=is_promotion,
-                )
+                ), None
             
             except asyncio.TimeoutError:
                 think_time = time.time() - start_time
-                logger.warning(f"[{self.match_id}] {player.name} timed out on move {move_number} (attempt {attempt}, {think_time:.1f}s)")
-                logger.info(f"[{self.match_id}] Time control limit: {self.time_control.value}s, actual time: {think_time:.1f}s")
+                logger.info(
+                    f"[{self.match_id}] {player.name} move {move_number} exceeded time limit "
+                    f"({think_time:.1f}s > {self.time_control.value}s), attempt {attempt}/{self.max_retries}"
+                )
                 self._record_illegal_attempt(color)
+                if attempt >= self.max_retries:
+                    logger.warning(
+                        f"[{self.match_id}] {player.name} exhausted retries due to timeout at move {move_number}"
+                    )
+                    return None, "timeout"
             
             except Exception as e:
                 logger.error(f"[{self.match_id}] Error getting move from {player.name} (move {move_number}, attempt {attempt}): {e}", exc_info=True)
                 self._record_illegal_attempt(color)
+                if attempt >= self.max_retries:
+                    return None, "api_error"
         
         # Exceeded max retries
         logger.error(f"[{self.match_id}] {player.name} exhausted all {self.max_retries} attempts for move {move_number} - forfeiting")
-        return None
+        return None, "illegal"
     
     def _build_move_prompt(
         self,
@@ -642,10 +659,13 @@ No explanations, no commentary. Just the move."""
             return response
         except asyncio.TimeoutError:
             call_duration = time.time() - call_start
-            logger.warning(f"[{self.match_id}] LLM call timed out for {player.name} after {call_duration:.1f}s (limit: {timeout}s)")
+            logger.debug(
+                f"[{self.match_id}] LLM call exceeded local time limit for {player.name} "
+                f"(elapsed: {call_duration:.1f}s, limit: {timeout}s)"
+            )
             raise
     
-    def _parse_move_response(self, response: str) -> Optional[str]:
+    def _parse_move_response(self, response: str, board: Optional[chess.Board] = None) -> Optional[str]:
         """
         Extract a chess move from an LLM response.
         
@@ -667,6 +687,8 @@ No explanations, no commentary. Just the move."""
         for pattern, replacement in self.CASTLING_PATTERNS.items():
             response = re.sub(pattern, replacement, response, flags=re.IGNORECASE)
         
+        candidates: List[str] = []
+
         # Try each pattern
         for pattern in self.MOVE_PATTERNS:
             match = re.search(pattern, response, re.IGNORECASE | re.MULTILINE)
@@ -674,7 +696,39 @@ No explanations, no commentary. Just the move."""
                 move = match.group(1).strip()
                 # Validate basic structure
                 if self._looks_like_move(move):
+                    candidates.append(move)
+        
+        # Broader scan fallback: capture all SAN-like tokens and prefer legal ones
+        for token in re.findall(
+            r"\b(?:O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#]?)\b",
+            response,
+            re.IGNORECASE,
+        ):
+            token = token.strip()
+            if self._looks_like_move(token):
+                candidates.append(token)
+
+        # Preserve order while de-duplicating
+        seen = set()
+        ordered_candidates = []
+        for move in candidates:
+            key = move.upper()
+            if key in seen:
+                continue
+            seen.add(key)
+            ordered_candidates.append(move)
+        
+        # If board provided, prefer first candidate that is legal in current position
+        if board:
+            for move in ordered_candidates:
+                try:
+                    board.parse_san(move)
                     return move
+                except ValueError:
+                    continue
+        
+        if ordered_candidates:
+            return ordered_candidates[0]
         
         # Last resort: if response is very short, treat as move
         if len(response) <= 7 and self._looks_like_move(response):

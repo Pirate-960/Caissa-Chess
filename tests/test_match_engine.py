@@ -168,6 +168,7 @@ class TestMatchResult:
         assert data["total_moves"] == 42
         assert data["prompt_variant"] == "A"
         assert isinstance(data["prompt_trace"], dict)
+        assert data["forfeit_cause"] is None
 
 
 class TestMatchEngineMovePatterns:
@@ -235,6 +236,18 @@ class TestMatchEngineMovePatterns:
         """Invalid chess notation should return None."""
         assert engine._parse_move_response("hello world") is None
         assert engine._parse_move_response("z99") is None
+
+    def test_parse_prefers_legal_move_from_pgn_dump(self, engine):
+        """When response includes multiple SAN tokens, parser should prefer legal move for current board."""
+        engine.board.push_san("e4")
+        engine.board.push_san("c6")
+        response = (
+            '[Event "Caissa Masterpiece Generation"]\n'
+            "[Site \"The Aesthetic Engine\"]\n"
+            "1. e4 c6\n"
+            "My move is d4."
+        )
+        assert engine._parse_move_response(response, board=engine.board) == "d4"
 
 
 class TestMatchEngineMoveValidation:
@@ -481,7 +494,31 @@ class TestMatchEngineAsync:
             # White should forfeit
             assert result.result == GameResult.BLACK_WINS
             assert result.termination == TerminationReason.FORFEIT
+            assert result.forfeit_cause == "illegal"
         
+        asyncio.run(run_test())
+
+    def test_forfeit_cause_timeout_when_all_attempts_timeout(self):
+        """Timeout-driven forfeits should preserve the cause for user messaging."""
+        async def run_test():
+            white_provider = Mock()
+            white_provider.generate = Mock(return_value="e4")
+
+            black_provider = Mock()
+            black_provider.generate = Mock(return_value="e5")
+
+            white = TournamentPlayer(name="White", provider=white_provider)
+            black = TournamentPlayer(name="Black", provider=black_provider)
+
+            engine = MatchEngine(white, black, max_retries=3)
+
+            with patch.object(engine, "_call_llm", side_effect=asyncio.TimeoutError):
+                result = await engine.play_match()
+
+            assert result.result == GameResult.BLACK_WINS
+            assert result.termination == TerminationReason.FORFEIT
+            assert result.forfeit_cause == "timeout"
+
         asyncio.run(run_test())
 
 

@@ -250,7 +250,7 @@ class MatchAnalyzer:
         """Clean up Stockfish process."""
         if self.stockfish:
             try:
-                self.stockfish.cleanup()
+                self.stockfish.quit()
                 logger.debug("Cleaned up Stockfish process")
             except Exception as e:
                 logger.warning(f"Error cleaning up Stockfish: {e}")
@@ -918,7 +918,11 @@ class MatchAnalyzer:
         for moment in critical_moments[:5]:  # Limit to top 5 moments
             try:
                 prompt = self._build_commentary_prompt(match_result, moment)
-                response = await self.commentary_provider.generate(prompt)
+                response = self.commentary_provider.generate(
+                    system_prompt=f"You are a chess commentator providing concise {self.commentary_style} analysis.",
+                    user_prompt=prompt,
+                    temperature=0.7,
+                )
                 commentary_list.append(response.strip())
             except Exception as e:
                 logger.warning(f"Failed to generate commentary for move {moment.move_number}: {e}")
