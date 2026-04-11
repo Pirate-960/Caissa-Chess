@@ -96,6 +96,8 @@ try:
         export_format="html",
     )
     print(f"  ✓ MatchConfig created: {match_config.white_provider} vs {match_config.black_provider}")
+    assert hasattr(match_config, "ab_test_enabled")
+    assert match_config.ab_test_enabled is False
     
     tournament_config = TournamentConfig(
         name="Test Tournament",

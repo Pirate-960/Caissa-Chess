@@ -128,6 +128,8 @@ class MatchResult:
     time_control: TimeControl = TimeControl.RAPID
     opening_name: str = ""
     eco_code: str = ""
+    prompt_variant: str = "A"
+    prompt_trace: Dict[str, Any] = field(default_factory=dict)
     
     @property
     def duration(self) -> float:
@@ -175,6 +177,8 @@ class MatchResult:
             "opening_name": self.opening_name,
             "eco_code": self.eco_code,
             "elo_change": self.elo_change.summary if self.elo_change else None,
+            "prompt_variant": self.prompt_variant,
+            "prompt_trace": self.prompt_trace,
         }
 
 
@@ -230,6 +234,9 @@ class MatchEngine:
         on_move: Optional[Callable[[MoveRecord], None]] = None,
         stockfish_client: Optional[Any] = None,
         beauty_evaluator: Optional[Any] = None,
+        prompt_variant: str = "A",
+        prompt_trace: Optional[Dict[str, Any]] = None,
+        system_prompt_override: Optional[str] = None,
     ):
         """
         Initialize the match engine.
@@ -256,6 +263,9 @@ class MatchEngine:
         self.on_move = on_move
         self.stockfish_client = stockfish_client
         self.beauty_evaluator = beauty_evaluator
+        self.prompt_variant = prompt_variant
+        self.prompt_trace = dict(prompt_trace or {})
+        self.system_prompt_override = system_prompt_override
         
         # Game state
         self.board = chess.Board(starting_fen)
@@ -414,6 +424,8 @@ class MatchEngine:
             time_control=self.time_control,
             elo_change=elo_change,
             commentary=self.commentary,
+            prompt_variant=self.prompt_variant,
+            prompt_trace=self.prompt_trace,
         )
         
         return result
@@ -605,7 +617,7 @@ Do not include any explanation or commentary. Just the move."""
         timeout = self.time_control.value if self.time_control.value > 0 else 300
         
         # System prompt for chess move generation
-        system_prompt = """You are a chess player. Respond with ONLY your move in standard algebraic notation.
+        system_prompt = self.system_prompt_override or """You are a chess player. Respond with ONLY your move in standard algebraic notation.
 Examples: e4, Nf3, Bxc6, O-O, e8=Q
 No explanations, no commentary. Just the move."""
         
@@ -740,6 +752,17 @@ No explanations, no commentary. Just the move."""
         game.headers["TimeControl"] = self.time_control.name
         game.headers["WhiteElo"] = str(self.white.elo_rating)
         game.headers["BlackElo"] = str(self.black.elo_rating)
+        game.headers["PromptVariant"] = self.prompt_variant
+        if self.prompt_trace:
+            checksum = str(self.prompt_trace.get("template_checksum", "")).strip()
+            risk = self.prompt_trace.get("lint_risk_score", None)
+            profile = str(self.prompt_trace.get("commentary_profile", "")).strip()
+            if checksum:
+                game.headers["PromptChecksum"] = checksum
+            if risk is not None:
+                game.headers["PromptRisk"] = str(risk)
+            if profile:
+                game.headers["PromptCommentaryProfile"] = profile
         
         if self.starting_fen != chess.STARTING_FEN:
             game.headers["FEN"] = self.starting_fen

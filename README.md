@@ -21,6 +21,7 @@ Unlike traditional engines that optimize for a single metric (strength), CAISSA 
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Contributing & code standards |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Full project vision & timeline |
 | [docs/LLM_VS_LLM.md](docs/LLM_VS_LLM.md) | LLM vs LLM tournament architecture |
+| [docs/MODE_CONTRACTS.md](docs/MODE_CONTRACTS.md) | Mode-specific validation/export contracts |
 
 ## 🏗️ Architecture Overview
 

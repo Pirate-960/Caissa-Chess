@@ -166,6 +166,8 @@ class TestMatchResult:
         assert data["match_id"] == "test-123"
         assert data["result"] == "1-0"
         assert data["total_moves"] == 42
+        assert data["prompt_variant"] == "A"
+        assert isinstance(data["prompt_trace"], dict)
 
 
 class TestMatchEngineMovePatterns:

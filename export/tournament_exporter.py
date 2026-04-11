@@ -888,6 +888,17 @@ class MatchExporter(GameExporter):
             "MatchID": match_result.match_id,
             "Annotator": "CAISSA v0.5.0 LLM Tournament System",
         }
+        headers["PromptVariant"] = getattr(match_result, "prompt_variant", "A")
+        prompt_trace = getattr(match_result, "prompt_trace", {}) or {}
+        checksum = str(prompt_trace.get("template_checksum", "")).strip()
+        risk = prompt_trace.get("lint_risk_score", None)
+        profile = str(prompt_trace.get("commentary_profile", "")).strip()
+        if checksum:
+            headers["PromptChecksum"] = checksum
+        if risk is not None:
+            headers["PromptRisk"] = str(risk)
+        if profile:
+            headers["PromptCommentaryProfile"] = profile
         
         # Add ELO change info
         if include_elo and match_result.elo_change:
@@ -1325,6 +1336,8 @@ class MatchExporter(GameExporter):
         mr = self.match_result
         data["match_metadata"] = {
             "match_id": mr.match_id,
+            "prompt_variant": getattr(mr, "prompt_variant", "A"),
+            "prompt_trace": getattr(mr, "prompt_trace", {}) or {},
             "time_control": {
                 "name": mr.time_control.name,
                 "seconds_per_move": mr.time_control.value,

@@ -16,10 +16,14 @@ PHASE 3.1 ENHANCEMENTS:
 Original functionality 100% preserved.
 """
 
+import json
+import hashlib
 import random
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, Literal, List, Dict, Callable, Tuple
+from pathlib import Path
+from string import Formatter
+from typing import Optional, Literal, List, Dict, Callable, Tuple, Any
 from enum import Enum
 import logging
 
@@ -332,6 +336,39 @@ Return the game in this exact format:
 ### FINAL INSTRUCTION
 Generate now. Think deeply. Make every move count. The chessboard awaits your masterpiece.
 """
+    _SYSTEM_TEMPLATE_OVERRIDE: Optional[str] = None
+    _USER_PROMPT_PREFIX_OVERRIDE: Optional[str] = None
+    _USER_PROMPT_SUFFIX_OVERRIDE: Optional[str] = None
+    _OPENING_KEY_OVERRIDE: Optional[str] = None
+    _PROMPT_MODE_OVERRIDE: str = "single"
+    _COMMENTARY_PROFILE_OVERRIDE: str = "off"
+    _COMMENTARY_INTENSITY_OVERRIDE: int = 5
+    _OPENINGS_CACHE: Optional[Dict[str, Dict[str, Any]]] = None
+    _OPENING_RECENTS: List[str] = []
+    _OPENING_FAVORITES: List[str] = []
+    _SYSTEM_REQUIRED_FIELDS = {
+        "era",
+        "theme",
+        "white_player",
+        "black_player",
+        "aggression_score",
+        "chaos_score",
+        "depth",
+        "conclusion_objective",
+        "expected_result",
+    }
+    _DEFAULT_PROFILE_COMPATIBILITY = {"single": True, "match": True, "tournament": True}
+    _MODE_CONTRACTS = {
+        "single": "Single mode contract: produce a complete legal game with terminal result (no '*').",
+        "match": "Match mode contract: legal moves required; forfeit/timeout/in-progress semantics allowed by match engine.",
+        "tournament": "Tournament contract: match-level semantics allowed; aggregate standings/export consistency required.",
+    }
+    _COMMENTARY_PROFILES = {
+        "off": "",
+        "broadcast": "Provide concise live-commentary hooks for critical moments, momentum shifts, and tactical turning points.",
+        "educational": "Prioritize didactic commentary hooks explaining strategic plans, tactical motifs, and instructive mistakes.",
+        "dramatic": "Prioritize high-energy commentary hooks with narrative tension and key-moment framing.",
+    }
 
     # ORIGINAL ERA GUIDELINES (100% PRESERVED)
     ERA_GUIDELINES = {
@@ -621,6 +658,527 @@ Generate now. Think deeply. Make every move count. The chessboard awaits your ma
     def __init__(self):
         pass
 
+    @classmethod
+    def _catalog_checksum(cls, catalog: Dict[str, str]) -> str:
+        blob = json.dumps(catalog, sort_keys=True, ensure_ascii=False)
+        return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+
+    @classmethod
+    def _prepared_library(cls) -> Dict[str, Dict[str, str]]:
+        base = cls.SYSTEM_TEMPLATE
+        templates = {
+            "balanced_default": {
+                "system_template": base,
+                "user_prompt_prefix": "",
+                "user_prompt_suffix": "",
+            },
+            "tactical_sharp": {
+                "system_template": base + "\n\n### STYLE OVERRIDE\nPrioritize tactical complications, forcing lines, and sacrificial motifs while preserving legal PGN output.",
+                "user_prompt_prefix": "Emphasize tactical motifs and concrete calculation.",
+                "user_prompt_suffix": "",
+            },
+            "positional_classical": {
+                "system_template": base + "\n\n### STYLE OVERRIDE\nPrefer strategic accumulation, prophylaxis, and clean technical conversion with legal PGN output.",
+                "user_prompt_prefix": "Prioritize positional themes over speculative attacks.",
+                "user_prompt_suffix": "",
+            },
+            "annotation_rich": {
+                "system_template": base + "\n\n### ANNOTATION EMPHASIS\nProvide frequent but meaningful annotations for critical and instructive moves.",
+                "user_prompt_prefix": "Target rich commentary and annotations on key turning points.",
+                "user_prompt_suffix": "",
+            },
+            "strict_terminal": {
+                "system_template": base + "\n\n### TERMINAL RESULT ENFORCEMENT\nAlways finish with a concrete terminal result (1-0, 0-1, 1/2-1/2). Never output '*'.",
+                "user_prompt_prefix": "",
+                "user_prompt_suffix": "Ensure final PGN headers and final movetext result are consistent and terminal.",
+            },
+        }
+        tal = cls.PLAYER_PERSONALITIES.get(HistoricalPlayer.TAL)
+        brilliancy = cls.NARRATIVE_TEMPLATES.get(NarrativeArc.BRILLIANCY)
+        gm = cls.DIFFICULTY_GUIDELINES.get(DifficultyLevel.GRANDMASTER, "")
+        templates["asset_tal_brilliancy"] = {
+            "system_template": (
+                base
+                + "\n\n### ASSET TEMPLATE: TAL BRILLIANCY\n"
+                + (tal.to_prompt_injection() if tal else "")
+                + "\n\n"
+                + (brilliancy.to_prompt_section() if brilliancy else "")
+                + "\n\n"
+                + gm
+            ),
+            "user_prompt_prefix": "Blend tactical fireworks with coherent strategic narrative arc.",
+            "user_prompt_suffix": "",
+        }
+        templates["asset_endgame_magic"] = {
+            "system_template": (
+                base
+                + "\n\n### ASSET TEMPLATE: ENDGAME MAGIC\n"
+                + cls.NARRATIVE_TEMPLATES[NarrativeArc.ENDGAME_MAGIC].to_prompt_section()
+                + "\n\n"
+                + cls.DIFFICULTY_GUIDELINES[DifficultyLevel.MASTER]
+            ),
+            "user_prompt_prefix": "Aim for a clean technical conversion with one instructive endgame idea.",
+            "user_prompt_suffix": "",
+        }
+        return templates
+
+    # =========================================================================
+    # PROMPT STUDIO SUPPORT (non-breaking overrides)
+    # =========================================================================
+
+    @classmethod
+    def get_prompt_catalog(cls) -> Dict[str, str]:
+        """Return the active prompt catalog for inspection/editing."""
+        return {
+            "system_template": cls._SYSTEM_TEMPLATE_OVERRIDE or cls.SYSTEM_TEMPLATE,
+            "user_prompt_prefix": cls._USER_PROMPT_PREFIX_OVERRIDE or "",
+            "user_prompt_suffix": cls._USER_PROMPT_SUFFIX_OVERRIDE or "",
+        }
+
+    @classmethod
+    def get_prompt_context_state(cls) -> Dict[str, str]:
+        return {
+            "mode": cls._PROMPT_MODE_OVERRIDE,
+            "opening_key": cls._OPENING_KEY_OVERRIDE or "",
+            "commentary_profile": cls._COMMENTARY_PROFILE_OVERRIDE,
+            "commentary_intensity": str(cls._COMMENTARY_INTENSITY_OVERRIDE),
+        }
+
+    @classmethod
+    def set_prompt_mode(cls, mode: str) -> None:
+        if mode not in ("single", "match", "tournament"):
+            raise ValueError(f"Unsupported prompt mode: {mode}")
+        cls._PROMPT_MODE_OVERRIDE = mode
+
+    @classmethod
+    def set_opening_override(cls, opening_key: Optional[str]) -> None:
+        cls._OPENING_KEY_OVERRIDE = opening_key or None
+        if opening_key:
+            cls.track_opening_recent(opening_key)
+
+    @classmethod
+    def set_commentary_profile(cls, profile: str, intensity: Optional[int] = None) -> None:
+        if profile not in cls._COMMENTARY_PROFILES:
+            raise ValueError(f"Unsupported commentary profile: {profile}")
+        cls._COMMENTARY_PROFILE_OVERRIDE = profile
+        if intensity is not None:
+            cls._COMMENTARY_INTENSITY_OVERRIDE = max(0, min(10, int(intensity)))
+
+    @classmethod
+    def commentary_injection_text(cls) -> str:
+        profile = cls._COMMENTARY_PROFILE_OVERRIDE
+        if profile == "off":
+            return ""
+        guidance = cls._COMMENTARY_PROFILES.get(profile, "")
+        return (
+            "\n### COMMENTARY PROFILE\n"
+            f"- Profile: {profile}\n"
+            f"- Intensity: {cls._COMMENTARY_INTENSITY_OVERRIDE}/10\n"
+            f"- Guidance: {guidance}\n"
+            "- Keep commentary concise and preserve strict legal PGN output.\n"
+        )
+
+    @classmethod
+    def preview_commentary_injection(cls, profile: str, intensity: int) -> str:
+        if profile not in cls._COMMENTARY_PROFILES:
+            raise ValueError(f"Unsupported commentary profile: {profile}")
+        intensity = max(0, min(10, int(intensity)))
+        if profile == "off":
+            return "Commentary profile is OFF (no commentary injection will be added)."
+        guidance = cls._COMMENTARY_PROFILES.get(profile, "")
+        return (
+            "### COMMENTARY PROFILE\n"
+            f"- Profile: {profile}\n"
+            f"- Intensity: {intensity}/10\n"
+            f"- Guidance: {guidance}\n"
+            "- Keep commentary concise and preserve strict legal PGN output.\n"
+        )
+
+    @classmethod
+    def _load_openings(cls, root: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
+        if cls._OPENINGS_CACHE is not None:
+            return cls._OPENINGS_CACHE
+        base = root or Path(__file__).parent.parent
+        data_path = base / "data" / "openings.json"
+        cls._OPENINGS_CACHE = json.loads(data_path.read_text(encoding="utf-8"))
+        return cls._OPENINGS_CACHE
+
+    @classmethod
+    def reload_openings(cls, root: Optional[Path] = None) -> int:
+        """Force reload openings from disk and return count."""
+        cls._OPENINGS_CACHE = None
+        return len(cls._load_openings(root=root))
+
+    @classmethod
+    def fresh_openings_count(cls, root: Optional[Path] = None) -> int:
+        """Read openings directly from disk without cache for verification."""
+        base = root or Path(__file__).parent.parent
+        data_path = base / "data" / "openings.json"
+        data = json.loads(data_path.read_text(encoding="utf-8"))
+        return len(data.keys())
+
+    @classmethod
+    def openings_source_path(cls, root: Optional[Path] = None) -> str:
+        base = root or Path(__file__).parent.parent
+        return str(base / "data" / "openings.json")
+
+    @classmethod
+    def list_opening_keys(cls, root: Optional[Path] = None) -> List[str]:
+        book = cls._load_openings(root=root)
+        return sorted(book.keys())
+
+    @classmethod
+    def track_opening_recent(cls, opening_key: str) -> None:
+        if opening_key in cls._OPENING_RECENTS:
+            cls._OPENING_RECENTS.remove(opening_key)
+        cls._OPENING_RECENTS.insert(0, opening_key)
+        cls._OPENING_RECENTS = cls._OPENING_RECENTS[:10]
+
+    @classmethod
+    def get_opening_recents(cls) -> List[str]:
+        return list(cls._OPENING_RECENTS)
+
+    @classmethod
+    def toggle_opening_favorite(cls, opening_key: str) -> bool:
+        if opening_key in cls._OPENING_FAVORITES:
+            cls._OPENING_FAVORITES.remove(opening_key)
+            return False
+        cls._OPENING_FAVORITES.append(opening_key)
+        cls._OPENING_FAVORITES = sorted(set(cls._OPENING_FAVORITES))
+        return True
+
+    @classmethod
+    def get_opening_favorites(cls) -> List[str]:
+        return list(cls._OPENING_FAVORITES)
+
+    @classmethod
+    def get_opening_pack(cls, opening_key: str, root: Optional[Path] = None) -> Dict[str, Any]:
+        book = cls._load_openings(root=root)
+        if opening_key not in book:
+            raise KeyError(f"Unknown opening key: {opening_key}")
+        return book[opening_key]
+
+    @classmethod
+    def opening_injection_text(cls, opening_key: str, root: Optional[Path] = None) -> str:
+        item = cls.get_opening_pack(opening_key, root=root)
+        eco = item.get("eco", "N/A")
+        notes = item.get("notes", "")
+        moves = " ".join(item.get("moves", [])[:16]).strip()
+        return (
+            f"\n### OPENING PACK\n"
+            f"- Opening Key: {opening_key}\n"
+            f"- ECO: {eco}\n"
+            f"- Guiding line: {moves}\n"
+            f"- Strategic note: {notes}\n"
+            f"- Stay coherent with this opening family unless tactical necessity dictates deviation.\n"
+        )
+
+    @classmethod
+    def get_mode_contract(cls, mode: Optional[str] = None) -> str:
+        m = mode or cls._PROMPT_MODE_OVERRIDE
+        return cls._MODE_CONTRACTS.get(m, cls._MODE_CONTRACTS["single"])
+
+    @classmethod
+    def list_prepared_templates(cls) -> List[str]:
+        return sorted(cls._prepared_library().keys())
+
+    @classmethod
+    def get_prepared_template(cls, name: str) -> Dict[str, str]:
+        library = cls._prepared_library()
+        if name not in library:
+            raise KeyError(f"Unknown prepared template: {name}")
+        return dict(library[name])
+
+    @classmethod
+    def set_prompt_overrides(
+        cls,
+        system_template: Optional[str] = None,
+        user_prompt_prefix: Optional[str] = None,
+        user_prompt_suffix: Optional[str] = None,
+    ) -> None:
+        """Set session-level prompt overrides without mutating built-ins."""
+        if system_template is not None:
+            cls._SYSTEM_TEMPLATE_OVERRIDE = system_template
+        if user_prompt_prefix is not None:
+            cls._USER_PROMPT_PREFIX_OVERRIDE = user_prompt_prefix
+        if user_prompt_suffix is not None:
+            cls._USER_PROMPT_SUFFIX_OVERRIDE = user_prompt_suffix
+
+    @classmethod
+    def clear_prompt_overrides(cls) -> None:
+        """Clear all session-level prompt overrides."""
+        cls._SYSTEM_TEMPLATE_OVERRIDE = None
+        cls._USER_PROMPT_PREFIX_OVERRIDE = None
+        cls._USER_PROMPT_SUFFIX_OVERRIDE = None
+        cls._OPENING_KEY_OVERRIDE = None
+        cls._PROMPT_MODE_OVERRIDE = "single"
+        cls._COMMENTARY_PROFILE_OVERRIDE = "off"
+        cls._COMMENTARY_INTENSITY_OVERRIDE = 5
+
+    @classmethod
+    def validate_system_template(cls, template: str) -> Tuple[bool, str]:
+        """
+        Validate a system template by formatting with sample values.
+        Returns (ok, message).
+        """
+        report = cls.lint_system_template(template)
+        if report["strict_errors"]:
+            return False, "; ".join(report["strict_errors"])
+        try:
+            template.format(
+                era="Romantic 1850s",
+                theme="The Queen Sacrifice",
+                white_player="Caissa White",
+                black_player="Caissa Black",
+                aggression_score=7,
+                chaos_score=5,
+                depth=40,
+                climax_end=20,
+                date="2026.01.01",
+                era_guidelines="Guidelines",
+                theme_instruction="Instruction",
+                aggression_description="calculated but ambitious",
+                conclusion_objective="Conclude clearly",
+                expected_result="1-0",
+            )
+            return True, "Template is valid."
+        except KeyError as exc:
+            return False, f"Missing placeholder: {exc}"
+        except Exception as exc:
+            return False, f"Template error: {exc}"
+
+    @classmethod
+    def lint_system_template(cls, template: str) -> Dict[str, Any]:
+        """
+        Analyze a system template for strict errors and warnings.
+        Strict errors are suitable for blocking apply in strict mode.
+        """
+        fields = set()
+        for _, field_name, _, _ in Formatter().parse(template):
+            if field_name:
+                fields.add(field_name)
+
+        missing = sorted(cls._SYSTEM_REQUIRED_FIELDS - fields)
+        unknown = sorted(fields - (cls._SYSTEM_REQUIRED_FIELDS | {
+            "climax_end", "date", "era_guidelines", "theme_instruction", "aggression_description"
+        }))
+
+        strict_errors: List[str] = []
+        warnings: List[str] = []
+
+        if missing:
+            strict_errors.append(f"Missing required placeholders: {', '.join(missing)}")
+        if unknown:
+            warnings.append(f"Unknown placeholders: {', '.join(unknown)}")
+        if len(template.strip()) < 400:
+            warnings.append("Template is very short; quality may degrade.")
+        if "LEGAL" not in template.upper():
+            warnings.append("Legal-move constraint keyword not found (LEGAL).")
+        if "PGN" not in template.upper():
+            warnings.append("Output contract keyword not found (PGN).")
+        if "expected_result" not in fields:
+            warnings.append("No expected_result placeholder; terminal-result policy may be weakened.")
+        upper_template = template.upper()
+        if "DO NOT LEAVE IT AS '*'" not in upper_template and "NEVER OUTPUT '*'" not in upper_template:
+            warnings.append("Terminal-result safety phrase not found.")
+        if "ONLY USE STANDARD ALGEBRAIC NOTATION" not in upper_template:
+            warnings.append("SAN constraint phrase not found.")
+        if "DO NOT LEAVE IT AS '*'" in upper_template and "LEAVE IT AS '*'" in upper_template:
+            warnings.append("Conflicting terminal-result instructions detected.")
+
+        risk_findings: List[str] = []
+        risk_score = 0
+        if missing:
+            risk_score += min(50, 10 * len(missing))
+            risk_findings.append("Missing required placeholders")
+        if unknown:
+            risk_score += min(15, 3 * len(unknown))
+            risk_findings.append("Unknown placeholders")
+        if "Legal-move constraint keyword not found (LEGAL)." in warnings:
+            risk_score += 14
+            risk_findings.append("Missing legal constraint keyword")
+        if "Output contract keyword not found (PGN)." in warnings:
+            risk_score += 10
+            risk_findings.append("Missing PGN output contract keyword")
+        if "No expected_result placeholder; terminal-result policy may be weakened." in warnings:
+            risk_score += 12
+            risk_findings.append("Missing expected_result placeholder")
+        if "Terminal-result safety phrase not found." in warnings:
+            risk_score += 8
+            risk_findings.append("Missing terminal-result safety phrase")
+        if "SAN constraint phrase not found." in warnings:
+            risk_score += 7
+            risk_findings.append("Missing SAN constraint phrase")
+        if "Conflicting terminal-result instructions detected." in warnings:
+            risk_score += 18
+            risk_findings.append("Conflicting terminal-result instructions")
+        if "Template is very short; quality may degrade." in warnings:
+            risk_score += 6
+            risk_findings.append("Template is unusually short")
+        risk_score = max(0, min(100, risk_score))
+        risk_level = "low" if risk_score <= 24 else "medium" if risk_score <= 54 else "high"
+
+        return {
+            "fields": sorted(fields),
+            "missing_required": missing,
+            "unknown_fields": unknown,
+            "strict_errors": strict_errors,
+            "warnings": warnings,
+            "risk_score": risk_score,
+            "risk_level": risk_level,
+            "risk_findings": risk_findings,
+        }
+
+    @classmethod
+    def lint_template_with_mode(cls, template: str, mode: str) -> Dict[str, Any]:
+        report = cls.lint_system_template(template)
+        strict_errors = list(report["strict_errors"])
+        warnings = list(report["warnings"])
+        if mode == "single":
+            if "expected_result" not in report["fields"]:
+                strict_errors.append("single mode requires {expected_result}.")
+        elif mode in ("match", "tournament"):
+            if "expected_result" not in report["fields"]:
+                warnings.append(f"{mode} mode: expected_result placeholder is recommended for clearer exports.")
+        report["strict_errors"] = strict_errors
+        report["warnings"] = warnings
+        extra_risk = 0
+        if mode == "single" and "expected_result" not in report["fields"]:
+            extra_risk += 20
+        if mode in ("match", "tournament") and "expected_result" not in report["fields"]:
+            extra_risk += 6
+        report["risk_score"] = max(0, min(100, int(report.get("risk_score", 0)) + extra_risk))
+        report["risk_level"] = "low" if report["risk_score"] <= 24 else "medium" if report["risk_score"] <= 54 else "high"
+        if extra_risk:
+            findings = list(report.get("risk_findings", []))
+            findings.append(f"Mode-adjusted risk for {mode} contract")
+            report["risk_findings"] = findings
+        return report
+
+    @classmethod
+    def simulate_prompt_context(
+        cls,
+        mode: str = "single",
+        opening_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        from core.prompt_manager import GameContext, GameEra, PromptBias
+        pm = cls()
+        old_mode = cls._PROMPT_MODE_OVERRIDE
+        old_opening = cls._OPENING_KEY_OVERRIDE
+        try:
+            cls.set_prompt_mode(mode)
+            cls.set_opening_override(opening_key)
+            sample = GameContext(
+                era=GameEra.ROMANTIC,
+                theme=None,
+                white_player="Sim White",
+                black_player="Sim Black",
+                aggression_score=7,
+                chaos_score=5,
+                depth=40,
+                bias=PromptBias.NEUTRAL,
+            )
+            system_prompt = pm.build_system_prompt(sample)
+            user_prompt = pm.build_user_prompt(sample)
+            return {
+                "mode": mode,
+                "opening_key": opening_key or "",
+                "commentary_profile": cls._COMMENTARY_PROFILE_OVERRIDE,
+                "commentary_intensity": cls._COMMENTARY_INTENSITY_OVERRIDE,
+                "system_prompt": system_prompt,
+                "user_prompt": user_prompt,
+                "system_chars": len(system_prompt),
+                "user_chars": len(user_prompt),
+                "token_estimate": (len(system_prompt) + len(user_prompt)) // 4,
+                "compatibility": cls.compatibility_badges(system_prompt),
+            }
+        finally:
+            cls._PROMPT_MODE_OVERRIDE = old_mode
+            cls._OPENING_KEY_OVERRIDE = old_opening
+
+    @classmethod
+    def compatibility_badges(cls, template: str) -> Dict[str, bool]:
+        report = cls.lint_system_template(template)
+        warnings = set(report["warnings"])
+        has_core_contract = (
+            "Legal-move constraint keyword not found (LEGAL)." not in warnings
+            and "Output contract keyword not found (PGN)." not in warnings
+        )
+        single_ok = (
+            "expected_result" in report["fields"]
+            and not report["strict_errors"]
+            and has_core_contract
+        )
+        match_ok = has_core_contract and not report["strict_errors"]
+        tournament_ok = has_core_contract and not report["strict_errors"]
+        return {
+            "single": single_ok,
+            "match": match_ok,
+            "tournament": tournament_ok,
+        }
+
+    @classmethod
+    def save_prompt_profile(
+        cls,
+        profile_name: str,
+        root: Optional[Path] = None,
+        author: str = "unknown",
+        version: str = "1.0.0",
+        compatibility: Optional[Dict[str, bool]] = None,
+    ) -> Path:
+        """Save current prompt overrides to prompts/custom_profiles/<name>.json."""
+        base = root or Path(__file__).parent.parent
+        out_dir = base / "prompts" / "custom_profiles"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        filepath = out_dir / f"{profile_name}.json"
+        catalog = cls.get_prompt_catalog()
+        payload = {
+            "metadata": {
+                "name": profile_name,
+                "author": author,
+                "version": version,
+                "created_at": datetime.utcnow().isoformat() + "Z",
+                "compatibility": compatibility or cls.compatibility_badges(catalog["system_template"]),
+                "checksum": cls._catalog_checksum(catalog),
+            },
+            "catalog": catalog,
+        }
+        filepath.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        return filepath
+
+    @classmethod
+    def load_prompt_profile(cls, profile_name: str, root: Optional[Path] = None) -> Path:
+        """Load prompt overrides from prompts/custom_profiles/<name>.json."""
+        base = root or Path(__file__).parent.parent
+        filepath = base / "prompts" / "custom_profiles" / f"{profile_name}.json"
+        data = json.loads(filepath.read_text(encoding="utf-8"))
+        catalog = data.get("catalog") if isinstance(data, dict) else None
+        if not isinstance(catalog, dict):
+            # Backward compatibility with old profile format.
+            catalog = data
+        cls.set_prompt_overrides(
+            system_template=catalog.get("system_template"),
+            user_prompt_prefix=catalog.get("user_prompt_prefix"),
+            user_prompt_suffix=catalog.get("user_prompt_suffix"),
+        )
+        return filepath
+
+    @classmethod
+    def read_prompt_profile_metadata(cls, profile_name: str, root: Optional[Path] = None) -> Dict[str, Any]:
+        base = root or Path(__file__).parent.parent
+        filepath = base / "prompts" / "custom_profiles" / f"{profile_name}.json"
+        data = json.loads(filepath.read_text(encoding="utf-8"))
+        return data.get("metadata", {}) if isinstance(data, dict) else {}
+
+    @classmethod
+    def list_prompt_profiles(cls, root: Optional[Path] = None) -> List[str]:
+        """List available prompt profile names."""
+        base = root or Path(__file__).parent.parent
+        pdir = base / "prompts" / "custom_profiles"
+        if not pdir.exists():
+            return []
+        return sorted(p.stem for p in pdir.glob("*.json"))
+
     # =========================================================================
     # ORIGINAL METHODS (100% PRESERVED - IDENTICAL SIGNATURES)
     # =========================================================================
@@ -668,7 +1226,7 @@ Generate now. Think deeply. Make every move count. The chessboard awaits your ma
             else:
                 conclusion_objective = "The game should be a hard-fought, evenly-matched battle ending in a draw."
         else:  # NEUTRAL — let the LLM decide
-            expected_result = "*"
+            expected_result = "1-0 | 0-1 | 1/2-1/2 (choose one; do not use *)"
             conclusion_objective = (
                 "The outcome is entirely yours to decide. Choose the most dramatically "
                 "satisfying ending — White wins (1-0), Black wins (0-1), or draw (1/2-1/2). "
@@ -676,7 +1234,8 @@ Generate now. Think deeply. Make every move count. The chessboard awaits your ma
                 "Update the [Result] header in the PGN output to match your chosen conclusion."
             )
 
-        return self.SYSTEM_TEMPLATE.format(
+        active_system_template = self._SYSTEM_TEMPLATE_OVERRIDE or self.SYSTEM_TEMPLATE
+        rendered = active_system_template.format(
             era=context.era.value,
             theme=context.theme.value if context.theme else "Your choice of brilliant concept",
             white_player=context.white_player,
@@ -692,6 +1251,16 @@ Generate now. Think deeply. Make every move count. The chessboard awaits your ma
             conclusion_objective=conclusion_objective,
             expected_result=expected_result,
         )
+        mode_contract = self.get_mode_contract()
+        if mode_contract:
+            rendered += f"\n\n### MODE CONTRACT\n{mode_contract}\n"
+        if self._OPENING_KEY_OVERRIDE:
+            try:
+                rendered += self.opening_injection_text(self._OPENING_KEY_OVERRIDE)
+            except Exception:
+                logger.warning("Failed to inject opening pack for key=%s", self._OPENING_KEY_OVERRIDE)
+        rendered += self.commentary_injection_text()
+        return rendered
 
     def build_user_prompt(self, context: GameContext) -> str:
         """Build the user prompt (final trigger) for the LLM."""
@@ -736,7 +1305,10 @@ Generate a {context.depth} half-move chess game with the following specification
 Now, thinking step-by-step through the Concept → Spark → Climax → Conclusion framework, 
 generate the complete PGN game:
 """
-        return user_prompt.strip()
+        prefix = self._USER_PROMPT_PREFIX_OVERRIDE or ""
+        suffix = self._USER_PROMPT_SUFFIX_OVERRIDE or ""
+        merged = f"{prefix}\n{user_prompt.strip()}\n{suffix}".strip()
+        return merged
 
     # =========================================================================
     # PHASE 3.1: ADVANCED PROMPT GENERATION METHODS

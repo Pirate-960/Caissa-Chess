@@ -196,6 +196,7 @@ class MatchConfig:
     export_format: str
     enable_analysis: bool = True
     enable_commentary: bool = True
+    ab_test_enabled: bool = False
     output_dir: str = "games/matches/"
 
 
@@ -276,6 +277,7 @@ class ImprovedMatchBuilder:
             ("white_player", self._select_white_player),
             ("black_player", self._select_black_player),
             ("analysis", self._configure_analysis),
+            ("ab_test", self._configure_ab_test),
             ("export", self._select_export_format),
             ("confirm", self._confirm_match),
         ]
@@ -445,6 +447,22 @@ class ImprovedMatchBuilder:
         
         self.config.export_format = formats[choice][0]
         return self.config.export_format, False
+
+    def _configure_ab_test(self) -> Tuple[bool, bool]:
+        """Step 5: Configure Prompt A/B run mode."""
+        print("\n" + "="*60)
+        print("  🧪 STEP 5: Prompt A/B")
+        print("="*60)
+        print("\n  Compare prompt variants in the same match workflow:")
+        print("    1. Off (single run)")
+        print("    2. On (run Variant A and Variant B)")
+        print("    0. ← Back")
+
+        choice = self._prompt_with_back("Select A/B mode", default=1, min_val=1, max_val=2)
+        if choice == 0:
+            return False, True
+        self.config.ab_test_enabled = (choice == 2)
+        return self.config.ab_test_enabled, False
     
     def _confirm_match(self) -> Tuple[bool, bool]:
         """Step 6: Confirm and execute."""
@@ -460,14 +478,15 @@ class ImprovedMatchBuilder:
                          "Analysis Only" if self.config.enable_analysis else \
                          "No Analysis"
         print(f"  ✨ Analysis:      {analysis_status}")
+        print(f"  🧪 Prompt A/B:    {'Enabled' if self.config.ab_test_enabled else 'Disabled'}")
         
         print(f"  📁 Export:        {self.config.export_format}")
         print(f"  📂 Output:        {self.config.output_dir}")
         print()
         
-        choice_str = input(f"  > Start match? [Y/n/back]: ").strip().lower()
+        choice_str = input(f"  > Start match? [Y/n/back/0]: ").strip().lower()
         
-        if choice_str in ["back", "b"]:
+        if choice_str in ["back", "b", "0"]:
             return False, True
         
         if choice_str in ["n", "no"]:
@@ -633,7 +652,7 @@ class ImprovedTournamentBuilder:
         print("     • gemini x 100     → 100 gemini players")
         print("     • 1-3, 5           → Players 1,2,3,5")
         print("     • all x 10         → 10 of each provider")
-        print("     • back or 0        → Go back")
+        print("     • back, b, 0, <    → Go back")
         print()
         
         while True:
@@ -740,7 +759,7 @@ class ImprovedTournamentBuilder:
             self.config.max_workers = 8
         else:
             while True:
-                workers_str = input(f"  > Number of workers [4]: ").strip()
+                workers_str = input(f"  > Number of workers [1-32, default 4]: ").strip()
                 if not workers_str:
                     self.config.max_workers = 4
                     break
@@ -809,9 +828,9 @@ class ImprovedTournamentBuilder:
         default_name = f"CAISSA Tournament {datetime.datetime.now().strftime('%Y-%m-%d %H-%M')}"
         
         print(f"\n  Default: {default_name}")
-        user_input = input(f"  > Tournament name [press Enter for default or 'back']: ").strip()
+        user_input = input(f"  > Tournament name [Enter=default, or back/b/0]: ").strip()
         
-        if user_input.lower() in ["back", "b"]:
+        if user_input.lower() in ["back", "b", "0"]:
             return None, True
         
         self.config.name = user_input if user_input else default_name
@@ -853,9 +872,9 @@ class ImprovedTournamentBuilder:
         print(f"  ⏰ Est. Time:     ~{est_time_minutes} minutes")
         print()
         
-        choice_str = input(f"  > Start tournament? [Y/n/back]: ").strip().lower()
+        choice_str = input(f"  > Start tournament? [Y/n/back/0]: ").strip().lower()
         
-        if choice_str in ["back", "b"]:
+        if choice_str in ["back", "b", "0"]:
             return False, True
         
         if choice_str in ["n", "no"]:
