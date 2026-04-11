@@ -210,6 +210,7 @@ class TournamentConfig:
     enable_analysis: bool = True
     enable_parallel: bool = True  # NEW: Parallel match execution
     max_workers: int = 4  # NEW: Thread pool size
+    pgn_pretty: bool = True  # Used when export includes per-game PGN
     output_dir: str = "tournaments/"
 
 
@@ -767,8 +768,10 @@ class ImprovedTournamentBuilder:
             1: ("html", "HTML [RECOMMENDED]"),
             2: ("markdown", "Markdown"),
             3: ("json", "JSON"),
-            4: ("pgn", "PGN (all games)"),
-            5: ("all", "ALL formats"),
+            4: ("pgn", "PGN (single file, compact)"),
+            5: ("pgn_pretty", "PGN (single file, pretty)"),
+            6: ("pgn_per_game", "PGN (per-game files, pretty)"),
+            7: ("all", "ALL formats (per-game PGN + HTML/JSON/MD + complete results)"),
         }
         
         print("\n  Options:")
@@ -776,12 +779,23 @@ class ImprovedTournamentBuilder:
             print(f"    {num}. {name}")
         print("    0. ← Back")
         
-        choice = self._prompt_with_back("Select export format", default=1, min_val=1, max_val=5)
+        choice = self._prompt_with_back("Select export format", default=1, min_val=1, max_val=7)
         
         if choice == 0:
             return None, True
         
         self.config.export_format = formats[choice][0]
+        if self.config.export_format == "all":
+            print("\n  Per-game PGN formatting:")
+            print("    1. Pretty PGN (readable, spaced)")
+            print("    2. Compact PGN (smaller files)")
+            pgn_choice = self._prompt_with_back("Select PGN style", default=1, min_val=1, max_val=2)
+            if pgn_choice == 0:
+                return None, True
+            self.config.pgn_pretty = (pgn_choice == 1)
+        else:
+            # Preserve current behavior for non-"all" tournament exports
+            self.config.pgn_pretty = True
         return self.config.export_format, False
     
     def _set_tournament_name(self) -> Tuple[str, bool]:
@@ -791,7 +805,8 @@ class ImprovedTournamentBuilder:
         print("="*60)
         
         import datetime
-        default_name = f"CAISSA Tournament {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        # Use Windows-safe timestamp (avoid ":" in folder/file names)
+        default_name = f"CAISSA Tournament {datetime.datetime.now().strftime('%Y-%m-%d %H-%M')}"
         
         print(f"\n  Default: {default_name}")
         user_input = input(f"  > Tournament name [press Enter for default or 'back']: ").strip()

@@ -230,6 +230,7 @@ def parse_pgn(pgn_text: str) -> ParsedGame:
 
     # Step 4: Parse moves with annotations
     game.moves = _parse_movetext(movetext)
+    _merge_move_commentary_section(game, pgn_text)
 
     # Step 5: Detect opening
     san_moves = [m.san for m in game.moves]
@@ -255,13 +256,92 @@ def parse_pgn(pgn_text: str) -> ParsedGame:
     # Step 7: Ensure result is in headers
     game.headers["Result"] = game.result
 
+    annotated_moves = sum(1 for m in game.moves if m.comment or m.nags)
     logger.debug(
-        f"Parsed game: {len(game.moves)} moves, "
-        f"{sum(1 for m in game.moves if m.comment)} annotated, "
-        f"opening={game.opening_name or 'unknown'}, result={game.result}"
+        "Parsed game: %d moves, %d annotated (%.1f%%), opening=%s, result=%s",
+        len(game.moves),
+        annotated_moves,
+        (annotated_moves * 100.0 / len(game.moves)) if game.moves else 0.0,
+        game.opening_name or "unknown",
+        game.result,
     )
 
     return game
+
+
+def _merge_move_commentary_section(game: ParsedGame, pgn_text: str) -> None:
+    """
+    Merge comments from a dedicated 'MOVE COMMENTARY' section into parsed moves.
+
+    Some one-LLM outputs provide commentary outside PGN movetext as:
+        12. Qh5! — comment...
+        12... Qf6! — reply comment...
+    This keeps older outputs compatible without changing existing features.
+    """
+    if not game.moves:
+        return
+
+    commentary_map = _extract_commentary_entries(pgn_text)
+    if not commentary_map:
+        return
+
+    for move in game.moves:
+        key = (move.move_number, move.is_white)
+        comment = commentary_map.get(key)
+        if not comment:
+            continue
+        if move.comment:
+            if comment not in move.comment:
+                move.comment = f"{move.comment} {comment}".strip()
+        else:
+            move.comment = comment
+
+
+def _extract_commentary_entries(pgn_text: str) -> Dict[Tuple[int, bool], str]:
+    """
+    Extract structured commentary entries from a MOVE COMMENTARY section.
+    Returns mapping: (move_number, is_white) -> comment text.
+    """
+    # Capture text between MOVE COMMENTARY divider and next section divider/end.
+    block_match = re.search(
+        r"MOVE COMMENTARY.*?\n(.*?)(?:\n[═=]{10,}.*?(?:GAME SUMMARY|$)|\Z)",
+        pgn_text,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if not block_match:
+        return {}
+
+    block = block_match.group(1).strip()
+    if not block:
+        return {}
+
+    entries: Dict[Tuple[int, bool], str] = {}
+    entry_pattern = re.compile(
+        r"(?m)^\s*(\d+)(\.\.\.|\.)\s*([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#]?|O-O(?:-O)?)[!?]*\s*[—-]\s*(.*)$"
+    )
+
+    current_key: Optional[Tuple[int, bool]] = None
+    for raw_line in block.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        m = entry_pattern.match(line)
+        if m:
+            move_no = int(m.group(1))
+            is_white = m.group(2) == "."
+            comment = m.group(4).strip()
+            current_key = (move_no, is_white)
+            if comment:
+                entries[current_key] = comment
+            else:
+                entries.setdefault(current_key, "")
+            continue
+
+        # Continuation line for the previous commentary entry.
+        if current_key is not None:
+            entries[current_key] = (entries.get(current_key, "") + " " + line).strip()
+
+    return {k: v for k, v in entries.items() if v}
 
 
 # =============================================================================

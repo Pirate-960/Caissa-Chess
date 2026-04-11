@@ -332,6 +332,10 @@ class LegalityValidator:
         if movetext:
             # Extract all move tokens from movetext
             extracted_moves = self._extract_moves_from_pgn(movetext)
+            if not extracted_moves:
+                errors.append("PGN contains no moves")
+                logger.warning("Validation failed: PGN contains no moves")
+                return False, errors
             
             logger.info("Validating %d extracted moves", len(extracted_moves))
             logger.debug("Extracted moves: %s", extracted_moves)
@@ -372,6 +376,11 @@ class LegalityValidator:
                     return False, errors
 
             logger.info("Validation passed: all %d moves legal", len(extracted_moves))
+
+        else:
+            errors.append("PGN contains no moves")
+            logger.warning("Validation failed: empty movetext")
+            return False, errors
 
         return True, errors
 

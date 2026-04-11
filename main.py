@@ -92,6 +92,19 @@ if not sys.stdout.isatty():
 # UI HELPERS
 # =============================================================================
 
+UI = {
+    "prompt": "❯",
+    "ok": "✓",
+    "error": "✖",
+    "warn": "⚠",
+    "info": "•",
+}
+
+
+def _soft_rule(width: int = 60):
+    """Render a subtle divider line."""
+    print(f"{C.DIM}{'─' * width}{C.RESET}")
+
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
@@ -117,25 +130,27 @@ def print_banner():
 
 def print_header(title: str, width: int = 60):
     """Print a section header."""
-    print(f"\n{C.CYAN}{C.BOLD}{'=' * width}")
-    print(f"  {title}")
-    print(f"{'=' * width}{C.RESET}\n")
+    print()
+    print(f"{C.CYAN}{C.DIM}{'╭' + '─' * (width - 2) + '╮'}{C.RESET}")
+    print(f"{C.CYAN}{C.BOLD}│ {title.ljust(width - 4)} │{C.RESET}")
+    print(f"{C.CYAN}{C.DIM}{'╰' + '─' * (width - 2) + '╯'}{C.RESET}")
+    print()
 
 
 def print_success(msg: str):
-    print(f"  {C.GREEN}[OK]{C.RESET} {msg}")
+    print(f"  {C.GREEN}{UI['ok']}{C.RESET} {msg}")
 
 
 def print_error(msg: str):
-    print(f"  {C.RED}[ERROR]{C.RESET} {msg}")
+    print(f"  {C.RED}{UI['error']}{C.RESET} {msg}")
 
 
 def print_warning(msg: str):
-    print(f"  {C.YELLOW}[WARN]{C.RESET} {msg}")
+    print(f"  {C.YELLOW}{UI['warn']}{C.RESET} {msg}")
 
 
 def print_info(msg: str):
-    print(f"  {C.BLUE}[INFO]{C.RESET} {msg}")
+    print(f"  {C.BLUE}{UI['info']}{C.RESET} {msg}")
 
 
 class _BufferingHandler(logging.Handler):
@@ -416,16 +431,17 @@ def prompt_choice(
     Returns:
         Selected index (0-based), or GO_BACK sentinel string.
     """
+    _soft_rule()
     print(f"  {C.BOLD}{prompt}{C.RESET}")
     for i, opt in enumerate(options, 1):
-        marker = f" {C.GREEN}(default){C.RESET}" if default == i else ""
-        print(f"    {C.CYAN}{i}.{C.RESET} {opt}{marker}")
+        marker = f" {C.GREEN}• default{C.RESET}" if default == i else ""
+        print(f"    {C.CYAN}{i:>2}.{C.RESET} {opt}{marker}")
     if allow_back:
-        print(f"    {C.DIM}0. ← Back{C.RESET}")
+        print(f"    {C.DIM} 0. ← Back{C.RESET}")
 
     while True:
         suffix = f" [{default}]" if default else ""
-        raw = input(f"\n  {C.YELLOW}>{C.RESET} Enter choice{suffix}: ").strip()
+        raw = input(f"\n  {C.YELLOW}{UI['prompt']}{C.RESET} Enter choice{suffix}: ").strip()
 
         if not raw and default is not None:
             return default - 1
@@ -456,7 +472,7 @@ def prompt_input(
     suffix = f" [{C.DIM}{default}{C.RESET}]" if default else ""
     if allow_back:
         suffix += f"  {C.DIM}(0 to go back){C.RESET}"
-    raw = input(f"  {C.YELLOW}>{C.RESET} {prompt}{suffix}: ").strip()
+    raw = input(f"  {C.YELLOW}{UI['prompt']}{C.RESET} {prompt}{suffix}: ").strip()
     if allow_back and raw.lower() in ("0", "back", "b"):
         return GO_BACK
     return raw if raw else (default or "")
@@ -491,7 +507,7 @@ def prompt_yes_no(
     """Prompt for yes/no. Returns GO_BACK on 'back'."""
     hint = "Y/n" if default else "y/N"
     back_hint = f"  {C.DIM}(0 to go back){C.RESET}" if allow_back else ""
-    raw = input(f"  {C.YELLOW}>{C.RESET} {prompt} [{hint}]{back_hint}: ").strip().lower()
+    raw = input(f"  {C.YELLOW}{UI['prompt']}{C.RESET} {prompt} [{hint}]{back_hint}: ").strip().lower()
     if allow_back and raw in ("0", "back", "b"):
         return GO_BACK
     if not raw:
@@ -517,20 +533,21 @@ def prompt_multi_choice(
     Returns:
         List of 0-based indices, or GO_BACK sentinel.
     """
+    _soft_rule()
     print(f"  {C.BOLD}{prompt}{C.RESET}")
     for i, opt in enumerate(options, 1):
         marker = ""
         if defaults and i in defaults:
-            marker = f" {C.GREEN}(*){C.RESET}"
-        print(f"    {C.CYAN}{i}.{C.RESET} {opt}{marker}")
+            marker = f" {C.GREEN}• default{C.RESET}"
+        print(f"    {C.CYAN}{i:>2}.{C.RESET} {opt}{marker}")
     if allow_back:
-        print(f"    {C.DIM}0. ← Back{C.RESET}")
+        print(f"    {C.DIM} 0. ← Back{C.RESET}")
     print(f"    {C.DIM}(Enter comma-separated numbers, e.g. 1,3,5 or 'all'){C.RESET}")
 
     while True:
         default_str = ",".join(str(d) for d in (defaults or []))
         suffix = f" [{default_str}]" if default_str else ""
-        raw = input(f"\n  {C.YELLOW}>{C.RESET} Enter choices{suffix}: ").strip()
+        raw = input(f"\n  {C.YELLOW}{UI['prompt']}{C.RESET} Enter choices{suffix}: ").strip()
 
         if not raw and defaults:
             return [d - 1 for d in defaults]
@@ -592,8 +609,8 @@ def interactive_generate():
         "PAWN_STORM", "QUIET_KILLER", "PERPETUAL_CHECK", "STALEMATE_TRAP",
         "BACK_RANK", "FIANCHETTO",
     ]
-    formats = ["PGN", "Markdown", "HTML", "JSON"]
-    format_keys = ["pgn", "markdown", "html", "json"]
+    formats = ["PGN", "Markdown", "HTML", "JSON", "All"]
+    format_keys = ["pgn", "markdown", "html", "json", "all"]
 
     # Collected answers (populated step-by-step) ──────────────────────────────
     style = era = theme = None
@@ -694,7 +711,7 @@ def interactive_generate():
 
         # Step 8 ── Output path & pretty
         if step == 8:
-            default_ext = {"pgn": ".pgn", "markdown": ".md", "html": ".html", "json": ".json"}
+            default_ext = {"pgn": ".pgn", "markdown": ".md", "html": ".html", "json": ".json", "all": ".pgn"}
             default_out = f"game{default_ext[output_format]}"
             v = prompt_input("Output file path", default_out, allow_back=True)
             if v is GO_BACK:
@@ -1803,8 +1820,30 @@ def _execute_generation(
             out_path = Path(output_path)
             
             try:
-                content = exporter.export(output_format)
-                out_path.write_text(content, encoding="utf-8")
+                cli_logger.info(
+                    "Single game export: format=%s path=%s moves=%d annotations=%d",
+                    output_format,
+                    str(out_path),
+                    parsed_game.move_count,
+                    sum(1 for m in parsed_game.moves if m.comment or m.nags),
+                )
+                if output_format == "all":
+                    all_content = exporter.export_all()
+                    export_targets = {
+                        "pgn": out_path.with_suffix(".pgn"),
+                        "markdown": out_path.with_suffix(".md"),
+                        "html": out_path.with_suffix(".html"),
+                        "json": out_path.with_suffix(".json"),
+                    }
+                    for fmt_name, file_path in export_targets.items():
+                        payload = all_content.get(fmt_name)
+                        if payload is None:
+                            continue
+                        file_path.write_text(payload, encoding="utf-8")
+                    content = all_content.get("pgn", pgn_string)
+                else:
+                    content = exporter.export(output_format)
+                    out_path.write_text(content, encoding="utf-8")
             except Exception as export_err:
                 # Fallback to raw PGN
                 out_path.write_text(pgn_string, encoding="utf-8")
@@ -1818,8 +1857,12 @@ def _execute_generation(
             
             print()
             print(f"  {C.GREEN}{C.BOLD}Game generated successfully!{C.RESET}")
-            print(f"    Saved to:    {C.CYAN}{out_path.absolute()}{C.RESET}")
-            print(f"    Format:      {C.CYAN}{output_format.upper()}{C.RESET}")
+            if output_format == "all":
+                print(f"    Saved to:    {C.CYAN}{out_path.parent.absolute()}{C.RESET}")
+                print(f"    Format:      {C.CYAN}ALL (PGN/MD/HTML/JSON){C.RESET}")
+            else:
+                print(f"    Saved to:    {C.CYAN}{out_path.absolute()}{C.RESET}")
+                print(f"    Format:      {C.CYAN}{output_format.upper()}{C.RESET}")
             print(f"    Moves:       {C.CYAN}{parsed_game.move_count}{C.RESET}")
             print(f"    Annotations: {C.CYAN}{ann_count}{C.RESET}")
             if opening_info:
@@ -1841,7 +1884,7 @@ def _execute_generation(
                 print(f"{C.DIM}{'─' * 60}{C.RESET}")
         else:
             print_error(f"Generation failed after {elapsed:.1f}s")
-            print_info(f"Response: {pgn_string[:200]}")
+            print_info(f"Reason: {pgn_string}")
     
     except Exception as e:
         print_error(f"Error during generation: {e}")
@@ -2674,6 +2717,12 @@ def _execute_llm_match_v2(config):
         filename_base = f"{result.match_id[:8]}_{config.white_provider}_vs_{config.black_provider}"
         
         print()
+        cli_logger.info(
+            "LLM match export planned: formats=%s output_dir=%s match_id=%s",
+            formats_to_export,
+            str(output_dir),
+            result.match_id,
+        )
         for fmt in formats_to_export:
             try:
                 if fmt == "html":
@@ -2692,6 +2741,13 @@ def _execute_llm_match_v2(config):
                     continue
                 
                 filepath = output_dir / f"{filename_base}.{ext}"
+                cli_logger.info(
+                    "LLM match export: format=%s path=%s moves=%d termination=%s",
+                    fmt,
+                    str(filepath),
+                    result.total_moves,
+                    result.termination.value,
+                )
                 filepath.write_text(content, encoding="utf-8")
                 print_success(f"Game saved ({fmt}): {filepath}")
             except Exception as e:
@@ -2854,16 +2910,42 @@ def _execute_tournament_v2(config):
         # Export
         output_dir = Path(config.output_dir) / config.name.replace(" ", "_").lower()
         
-        # Determine formats
+        # Determine formats and PGN mode
+        pretty_pgn = False
+        per_game_pgn = False
         if config.export_format == "all":
             format_list = ["html", "markdown", "json", "pgn"]
+            pretty_pgn = getattr(config, "pgn_pretty", True)
+            per_game_pgn = True
         else:
-            format_list = [config.export_format]
-            # Always include json for ELO tracking
-            if "json" not in format_list:
-                format_list.append("json")
+            if config.export_format == "pgn_pretty":
+                format_list = ["pgn", "json"]
+                pretty_pgn = True
+            elif config.export_format == "pgn_per_game":
+                format_list = ["pgn", "json"]
+                per_game_pgn = True
+            else:
+                format_list = [config.export_format]
+                # Always include json for ELO tracking
+                if "json" not in format_list:
+                    format_list.append("json")
         
-        exported = export_tournament(result, str(output_dir), formats=format_list)
+        exported = export_tournament(
+            result,
+            str(output_dir),
+            formats=format_list,
+            pretty_pgn=pretty_pgn,
+            per_game_pgn=per_game_pgn,
+        )
+        cli_logger.info(
+            "Tournament export complete: name=%s formats=%s pretty_pgn=%s per_game_pgn=%s output=%s files=%d",
+            config.name,
+            format_list,
+            pretty_pgn,
+            per_game_pgn,
+            str(output_dir),
+            len(exported),
+        )
         
         print()
         print_success(f"Results exported to: {output_dir}")

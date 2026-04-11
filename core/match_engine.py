@@ -325,6 +325,20 @@ class MatchEngine:
                 
                 # Log successful move with details
                 logger.info(f"[{self.match_id}] Move {move_number}: {move_record.san} by {current_player.name} (think time: {move_record.think_time:.2f}s, attempt: {move_record.attempt})")
+                logger.debug(
+                    "[%s] Move record details: move=%d color=%s san=%s uci=%s attempt=%d think_time=%.2fs check=%s capture=%s promotion=%s eval=%s",
+                    self.match_id,
+                    move_record.move_number,
+                    move_record.color,
+                    move_record.san,
+                    move_record.uci,
+                    move_record.attempt,
+                    move_record.think_time,
+                    move_record.is_check,
+                    move_record.is_capture,
+                    move_record.is_promotion,
+                    move_record.evaluation if move_record.evaluation is not None else "n/a",
+                )
                 if move_record.is_check:
                     logger.info(f"[{self.match_id}] ✓ Check!")
                 if move_record.is_capture:

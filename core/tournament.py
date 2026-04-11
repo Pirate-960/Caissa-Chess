@@ -12,6 +12,7 @@ import chess
 import json
 import logging
 import random
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -24,6 +25,14 @@ from core.elo_calculator import GameResult, EloLeaderboard
 
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_path_component(name: str) -> str:
+    """Create a filesystem-safe path component (Windows-safe)."""
+    sanitized = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", name).strip().strip(".")
+    if not sanitized:
+        sanitized = "tournament"
+    return sanitized
 
 
 class TournamentFormat(Enum):
@@ -305,8 +314,9 @@ class Tournament:
         # Game results: (player1_id, player2_id) -> list of results
         self.results_matrix: Dict[Tuple[str, str], List[GameResult]] = {}
         
-        # Output directory
-        self.output_dir = config.output_dir / config.name.replace(" ", "_").lower()
+        # Output directory (filesystem-safe, especially on Windows)
+        safe_name = _sanitize_path_component(config.name).replace(" ", "_").lower()
+        self.output_dir = config.output_dir / safe_name
         
         logger.info(f"Tournament '{config.name}' initialized with {len(self.players)} players")
     

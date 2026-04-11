@@ -543,6 +543,14 @@ class BatchEngine:
             except Exception:
                 pass
             quality = gen._assess_quality(moves, beauty)
+            logger.info(
+                "Job %d attempt %d quality assessment: quality=%s beauty=%s moves=%d",
+                job.index,
+                attempt,
+                quality.value,
+                f"{beauty:.2f}" if beauty is not None else "n/a",
+                len(moves),
+            )
 
             if (best_result is None
                     or quality_rank.get(quality, 0) > quality_rank.get(best_quality, 0)):
@@ -626,6 +634,7 @@ class BatchEngine:
             filepath = out_dir / f"{base}{ext}"
 
             try:
+                logger.info("Exporting job %d in format '%s'", job.index, fmt_lower)
                 content = exporter.export(fmt_lower)
                 filepath.write_text(content, encoding="utf-8")
                 job.output_files.append(str(filepath))

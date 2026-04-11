@@ -97,6 +97,30 @@ class TournamentExporter:
         """
         self.result = tournament_result
         self.config = config or TournamentExportConfig()
+
+    def _export_match_pgn(self, match: Any, pretty: bool = False) -> str:
+        """Export a single match as PGN, optionally using pretty formatting."""
+        if not pretty:
+            if match.pgn:
+                return match.pgn
+            return self._generate_minimal_pgn(match)
+
+        try:
+            # Use MatchExporter for pretty mode so move-level comments (think times,
+            # analysis commentary when present) are carried into the PGN output.
+            match_exporter = MatchExporter(match_result=match, include_elo=True)
+            return match_exporter.export_pgn()
+        except Exception:
+            logger.debug("Falling back to raw PGN for match %s", getattr(match, "match_id", "?"))
+
+        if match.pgn:
+            return match.pgn
+        return self._generate_minimal_pgn(match)
+
+    @staticmethod
+    def _safe_player_name(name: str) -> str:
+        """Create filesystem-safe player name component for export file names."""
+        return "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in name).strip("_")
     
     # =========================================================================
     # MARKDOWN EXPORTS
@@ -286,7 +310,7 @@ class TournamentExporter:
     # PGN EXPORTS
     # =========================================================================
     
-    def export_all_games_pgn(self, filepath: Optional[str] = None) -> str:
+    def export_all_games_pgn(self, filepath: Optional[str] = None, pretty: bool = False) -> str:
         """
         Export all tournament games as a single PGN collection.
         
@@ -305,12 +329,7 @@ class TournamentExporter:
             pgn_parts.append(f"; === Game {i}: {match.white.name} vs {match.black.name} ===")
             pgn_parts.append("")
             
-            # Use existing PGN from match
-            if match.pgn:
-                pgn_parts.append(match.pgn)
-            else:
-                # Generate minimal PGN if not available
-                pgn_parts.append(self._generate_minimal_pgn(match))
+            pgn_parts.append(self._export_match_pgn(match, pretty=pretty))
             
             pgn_parts.append("")
             pgn_parts.append("")
@@ -322,6 +341,67 @@ class TournamentExporter:
             logger.info(f"All games exported to {filepath}")
         
         return content
+
+    def export_games_pgn_per_game(self, output_dir: str, pretty: bool = True) -> Dict[str, str]:
+        """Export each tournament game into its own PGN file."""
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        exported: Dict[str, str] = {}
+
+        for idx, match in enumerate(self.result.matches, 1):
+            safe_white = self._safe_player_name(match.white.name)
+            safe_black = self._safe_player_name(match.black.name)
+            filename = f"game_{idx:03d}_{safe_white}_vs_{safe_black}.pgn"
+            path = out / filename
+            path.write_text(self._export_match_pgn(match, pretty=pretty), encoding="utf-8")
+            exported[f"pgn_game_{idx:03d}"] = str(path)
+
+        return exported
+
+    def export_games_reports_per_game(self, output_dir: str) -> Dict[str, str]:
+        """
+        Export each tournament game as per-game Markdown, JSON, and HTML.
+
+        This is additive to tournament-level exports and is intended for
+        "all formats" mode where every game gets its own report bundle.
+        """
+        base = Path(output_dir)
+        md_dir = base / "games_md"
+        json_dir = base / "games_json"
+        html_dir = base / "games_html"
+        md_dir.mkdir(parents=True, exist_ok=True)
+        json_dir.mkdir(parents=True, exist_ok=True)
+        html_dir.mkdir(parents=True, exist_ok=True)
+
+        exported: Dict[str, str] = {}
+        exported["games_md_dir"] = str(md_dir)
+        exported["games_json_dir"] = str(json_dir)
+        exported["games_html_dir"] = str(html_dir)
+
+        for idx, match in enumerate(self.result.matches, 1):
+            safe_white = self._safe_player_name(match.white.name)
+            safe_black = self._safe_player_name(match.black.name)
+            stem = f"game_{idx:03d}_{safe_white}_vs_{safe_black}"
+
+            try:
+                match_exporter = MatchExporter(match_result=match, include_elo=True)
+
+                md_path = md_dir / f"{stem}.md"
+                md_path.write_text(match_exporter.export_markdown(), encoding="utf-8")
+                exported[f"md_game_{idx:03d}"] = str(md_path)
+
+                json_path = json_dir / f"{stem}.json"
+                json_path.write_text(match_exporter.export_json(), encoding="utf-8")
+                exported[f"json_game_{idx:03d}"] = str(json_path)
+
+                html_path = html_dir / f"{stem}.html"
+                html_path.write_text(match_exporter.export_html(), encoding="utf-8")
+                exported[f"html_game_{idx:03d}"] = str(html_path)
+            except ValueError as e:
+                # Non-exportable edge case (e.g. empty/forfeit game); keep tournament export running.
+                logger.warning("Skipping per-game rich export for match %s: %s", getattr(match, "match_id", "?"), e)
+
+        return exported
     
     def export_player_games_pgn(
         self,
@@ -640,6 +720,8 @@ def export_tournament(
     tournament_result: Any,
     output_dir: str,
     formats: Optional[List[str]] = None,
+    pretty_pgn: bool = False,
+    per_game_pgn: bool = False,
 ) -> Dict[str, str]:
     """
     Convenience function to export tournament in multiple formats.
@@ -679,9 +761,17 @@ def export_tournament(
         exported["html"] = str(path)
     
     if "pgn" in formats:
-        path = output_path / "all_games.pgn"
-        exporter.export_all_games_pgn(str(path))
-        exported["pgn"] = str(path)
+        if per_game_pgn:
+            games_dir = output_path / "games_pgn"
+            exported.update(exporter.export_games_pgn_per_game(str(games_dir), pretty=pretty_pgn))
+            exported["pgn_games_dir"] = str(games_dir)
+            if any(fmt in formats for fmt in ("markdown", "json", "html")):
+                exported.update(exporter.export_games_reports_per_game(str(output_path)))
+        else:
+            filename = "all_games_pretty.pgn" if pretty_pgn else "all_games.pgn"
+            path = output_path / filename
+            exporter.export_all_games_pgn(str(path), pretty=pretty_pgn)
+            exported["pgn_pretty" if pretty_pgn else "pgn"] = str(path)
     
     logger.info(f"Tournament exported to {output_dir}: {list(exported.keys())}")
     return exported

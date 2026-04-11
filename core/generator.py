@@ -544,6 +544,25 @@ class CaissaGenerator:
                         )
                         continue
 
+                    # Require a terminal result for finalized one-LLM generations.
+                    # A "*" result indicates incomplete/in-progress game text.
+                    game_result = self._extract_result_marker(pgn_text)
+                    if game_result not in {"1-0", "0-1", "1/2-1/2"}:
+                        last_error = (
+                            "ERROR: Game result is incomplete ('*'). "
+                            "Please provide a complete legal game ending with 1-0, 0-1, or 1/2-1/2."
+                        )
+                        retry_count += 1
+                        self._current_progress.attempts = retry_count
+                        self._current_progress.errors.append(last_error)
+                        logger.warning(
+                            "Non-terminal result '%s'. Retrying (Attempt %d/%d)...",
+                            game_result,
+                            retry_count,
+                            self.max_retries,
+                        )
+                        continue
+
                     self.game_moves = extracted_moves
 
                     # Record statistics
@@ -576,6 +595,25 @@ class CaissaGenerator:
         self._record_stats(False, [], retry_count, time.time() - start_time, context)
         return False, final_error, []
 
+    @staticmethod
+    def _extract_result_marker(pgn_text: str) -> str:
+        """
+        Extract game result marker from PGN headers/movetext.
+        Returns '*' when result is missing or non-terminal.
+        """
+        if not pgn_text:
+            return "*"
+
+        header_match = re.search(r'\[Result\s+"([^"]+)"\]', pgn_text)
+        if header_match:
+            result = header_match.group(1).strip()
+            if result in {"1-0", "0-1", "1/2-1/2", "*"}:
+                return result
+
+        # Fall back to last explicit marker in body.
+        body_markers = re.findall(r"(1-0|0-1|1/2-1/2|\*)", pgn_text)
+        return body_markers[-1] if body_markers else "*"
+
     def _clean_response(self, response: str) -> Optional[str]:
         """
         Extract and clean PGN from potentially "chatty" LLM response.
@@ -606,15 +644,26 @@ class CaissaGenerator:
                 response = match.group(1).strip()
                 logger.debug("Extracted PGN from markdown code block")
         
-        # Try to find PGN content between [Event and result
-        # PGN games start with headers like [Event "..."] and end with 1-0, 0-1, 1/2-1/2, or *
-        # Use greedy matching to get all content including moves
-        pgn_pattern = r'(\[Event.*(?:1-0|0-1|1/2-1/2|\*))'
+        # Try to find a complete PGN game:
+        # 1) starts at [Event ...]
+        # 2) has a movetext section after a blank line
+        # 3) includes at least one move number token
+        # 4) ends with a game result marker
+        pgn_pattern = r'(\[Event[^\n]*\n(?:\[[^\n]*\]\n)*\n(?:.*?\n)?\s*\d+\..*?(?:1-0|0-1|1/2-1/2|\*))'
         match = re.search(pgn_pattern, response, re.DOTALL)
         if match:
             pgn_text = match.group(1).strip()
             logger.debug(f"Extracted PGN game ({len(pgn_text)} chars)")
             return pgn_text
+
+        # Fallback: if headers exist, keep everything from [Event onward
+        # and validate by checking that move extraction finds at least one move.
+        event_idx = response.find("[Event")
+        if event_idx != -1:
+            candidate = response[event_idx:].strip()
+            if self.validator.extract_moves_from_pgn(candidate):
+                logger.debug("Extracted PGN from [Event ...] fallback")
+                return candidate
         
         # If no headers found, but there are moves, assume it's moves-only PGN
         # Look for chess move patterns
