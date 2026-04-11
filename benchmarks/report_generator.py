@@ -19,11 +19,13 @@ Usage:
 
 import os
 import json
+import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
 import statistics
 
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # REPORT DATA CLASSES
@@ -751,11 +753,13 @@ class ReportGenerator:
     
     def to_html(self) -> str:
         """Generate HTML report."""
+        logger.info("Generating HTML benchmark report")
         generator = HTMLReportGenerator(self.suite_data, self.config)
         return generator.generate()
     
     def to_markdown(self) -> str:
         """Generate Markdown report."""
+        logger.info("Generating Markdown benchmark report")
         generator = MarkdownReportGenerator(self.suite_data, self.config)
         return generator.generate()
     

@@ -11,15 +11,17 @@
 # Priority: CLI args > Environment vars (.env) > caissa_config.local.yaml > caissa_config.yaml
 #
 # Sections:
-#   1. LLM Provider        - Which AI model to use and how
-#   2. Stockfish Engine     - Chess engine analysis settings
+#   1. LLM Provider         - Which AI model to use and how
+#   2. Stockfish Engine     - Chess engine analysis and validation settings
 #   3. Generation           - Game generation parameters
 #   4. Style & Aesthetics   - Playing style and beauty evaluation
 #   5. Prompt Engineering   - How to instruct the LLM
 #   6. Export & Output      - File formats and output paths
-#   7. Benchmarking         - Performance measurement settings
-#   8. Logging              - Log levels, files, and verbosity
-#   9. Advanced             - Retry logic, caching, and internals
+#   7. Benchmarking         - Performance and quality measurement settings
+#   8. Logging              - Centralized logging and verbosity controls
+#   9. Advanced             - Retry logic, parallel execution, and internals
+#  10. Batch Defaults       - Defaults for multi-game batch generation
+#  11. Tournament           - LLM vs LLM tournament, ELO, analytics, and export
 # ==============================================================================
 
 
@@ -355,7 +357,7 @@ logging:
   # --- Verbosity ---
   # Console output verbosity: quiet | normal | verbose | debug
   # Only takes effect when console_logs is true.
-  verbosity: "verbose"
+  verbosity: "normal"
 
 
 # ==============================================================================
@@ -476,6 +478,21 @@ tournament:
     
     # Include opening name/ECO code detection
     detect_opening: true
+
+    # Use heuristic legal-move fallback when an LLM move times out.
+    # true  = keep game flowing (fallback move instead of timeout-forfeit)
+    # false = keep strict timeout behavior (can forfeit after retries)
+    timeout_fallback_enabled: true
+
+    # Grace rules to reduce wasted LLM calls when repeated timeouts occur.
+    # After this many consecutive timeout-fallback moves for one side,
+    # skip LLM calls and use heuristics directly for cooldown_moves turns.
+    timeout_fallback_max_consecutive: 3
+    timeout_fallback_cooldown_moves: 2
+
+    # Include selected time control context in move prompts to encourage
+    # concise/fast responses under short clocks.
+    include_time_control_in_prompt: true
   
   # --- Player Personas ---
   # Enable legendary player style personas for LLMs

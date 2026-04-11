@@ -1,41 +1,42 @@
-"""Quick test to verify tournament config loads correctly."""
-import sys
-from pathlib import Path
+"""Tests to verify tournament config loads correctly."""
 
-# Add project root to path
-sys.path.insert(0, str(Path(__file__).parent))
+from config_manager import cfg
 
-try:
-    from config_manager import cfg
-    
-    print("=" * 60)
-    print("TOURNAMENT CONFIGURATION TEST")
-    print("=" * 60)
-    
-    # Test that tournament config exists
-    assert hasattr(cfg, 'tournament'), "❌ Tournament config not found!"
-    print("✓ Tournament config exists")
-    
-    # Test basic fields
-    print(f"✓ Default format: {cfg.tournament.default_format}")
-    print(f"✓ Default time control: {cfg.tournament.default_time_control}")
-    print(f"✓ Default rounds: {cfg.tournament.default_rounds}")
-    
-    # Test nested configs
-    print(f"✓ ELO initial rating: {cfg.tournament.elo.initial_rating}")
-    print(f"✓ Match max moves: {cfg.tournament.match.max_moves}")
-    print(f"✓ Commentary enabled: {cfg.tournament.commentary.enabled}")
-    print(f"✓ Output directory: {cfg.tournament.output.output_dir}")
-    
-    # Test time per move dict
-    print(f"✓ Rapid time per move: {cfg.tournament.time_per_move['rapid']}s")
-    
-    print("\n" + "=" * 60)
-    print("✅ ALL TESTS PASSED - Tournament config loaded successfully!")
-    print("=" * 60)
-    
-except Exception as e:
-    print(f"\n❌ ERROR: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+
+def _get_field(container, key):
+    """Read from dataclass-style objects and dicts."""
+    if isinstance(container, dict):
+        return container[key]
+    return getattr(container, key)
+
+
+def test_tournament_config_exists():
+    assert hasattr(cfg, "tournament")
+
+
+def test_tournament_basic_defaults():
+    tournament = cfg.tournament
+    assert _get_field(tournament, "default_format")
+    assert _get_field(tournament, "default_time_control")
+    assert isinstance(_get_field(tournament, "default_rounds"), int)
+
+
+def test_tournament_nested_sections():
+    tournament = cfg.tournament
+    elo = _get_field(tournament, "elo")
+    match = _get_field(tournament, "match")
+    commentary = _get_field(tournament, "commentary")
+    output = _get_field(tournament, "output")
+
+    assert _get_field(elo, "initial_rating") > 0
+    assert _get_field(match, "max_moves") > 0
+    assert isinstance(_get_field(commentary, "enabled"), bool)
+    assert _get_field(output, "output_dir")
+
+
+def test_tournament_time_per_move_contains_rapid():
+    tournament = cfg.tournament
+    tpm = _get_field(tournament, "time_per_move")
+    assert isinstance(tpm, dict)
+    assert "rapid" in tpm
+    assert tpm["rapid"] > 0

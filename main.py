@@ -42,7 +42,7 @@ except ImportError:
     pass
 
 from config_manager import cfg, reload_config, config_to_dict
-from log_manager import setup_logging, get_logger
+from log_manager import setup_logging, get_logger, get_console_handler
 from core.prompt_studio_cli import interactive_prompt_studio as _interactive_prompt_studio_impl
 
 # Initialize structured logging from config — must happen before first log.
@@ -344,15 +344,11 @@ class Spinner:
     def _mute_console(self):
         """Find the root logger's console StreamHandler, mute it, add buffer."""
         root = logging.getLogger()
-        for h in root.handlers:
-            if isinstance(h, logging.StreamHandler) and not isinstance(
-                h, logging.FileHandler
-            ):
-                self._console_handler = h
-                self._saved_level = h.level
-                # Suppress all console output while spinner is active
-                h.setLevel(logging.CRITICAL + 1)
-                break
+        self._console_handler = get_console_handler()
+        if self._console_handler:
+            self._saved_level = self._console_handler.level
+            # Suppress all console output while spinner is active
+            self._console_handler.setLevel(logging.CRITICAL + 1)
         # Attach a buffering handler to capture what would have gone to console
         self._buf_handler = _BufferingHandler()
         self._buf_handler.setLevel(self._saved_level)
@@ -448,14 +444,10 @@ class BatchSpinner:
     def _mute_console(self):
         """Suppress console log output while spinner is active."""
         root = logging.getLogger()
-        for h in root.handlers:
-            if isinstance(h, logging.StreamHandler) and not isinstance(
-                h, logging.FileHandler
-            ):
-                self._console_handler = h
-                self._saved_level = h.level
-                h.setLevel(logging.CRITICAL + 1)
-                break
+        self._console_handler = get_console_handler()
+        if self._console_handler:
+            self._saved_level = self._console_handler.level
+            self._console_handler.setLevel(logging.CRITICAL + 1)
         self._buf_handler = _BufferingHandler()
         self._buf_handler.setLevel(self._saved_level)
         root.addHandler(self._buf_handler)
@@ -2623,7 +2615,15 @@ def _execute_llm_match(
     print()
     
     # Create and run match
-    engine = MatchEngine(white_player, black_player, time_control=tc)
+    engine = MatchEngine(
+        white_player,
+        black_player,
+        time_control=tc,
+        timeout_fallback_enabled=getattr(cfg.tournament.match, "timeout_fallback_enabled", True),
+        timeout_fallback_max_consecutive=getattr(cfg.tournament.match, "timeout_fallback_max_consecutive", 3),
+        timeout_fallback_cooldown_moves=getattr(cfg.tournament.match, "timeout_fallback_cooldown_moves", 2),
+        include_time_control_in_prompt=getattr(cfg.tournament.match, "include_time_control_in_prompt", True),
+    )
     
     start_time = time.time()
     
@@ -2636,9 +2636,9 @@ def _execute_llm_match(
         # CRITICAL FIX: Check if match has moves before displaying/exporting
         if not result.moves or len(result.moves) == 0:
             print()
-            print(f"  {C.BOLD}{'═' * 60}{C.RESET}")
-            print(f"  {C.BOLD}⚠️  Match Did Not Complete{C.RESET}")
-            print(f"  {C.BOLD}{'═' * 60}{C.RESET}")
+            print(f"  {C.RED}{C.BOLD}{'═' * 60}{C.RESET}")
+            print(f"  {C.RED}{C.BOLD}⚠️  Match Did Not Complete{C.RESET}")
+            print(f"  {C.RED}{C.BOLD}{'═' * 60}{C.RESET}")
             
             print(f"    Result: {result.result.value}")
             print(f"    Termination: {result.termination.value}")
@@ -2803,6 +2803,11 @@ def _execute_llm_match_v2(config):
             prompt_variant=variant,
             prompt_trace={**prompt_trace_base, "variant": variant},
             system_prompt_override=system_prompt,
+            include_legal_moves_in_prompt=getattr(config, "inject_legal_moves_in_prompt", True),
+            timeout_fallback_enabled=getattr(cfg.tournament.match, "timeout_fallback_enabled", True),
+            timeout_fallback_max_consecutive=getattr(cfg.tournament.match, "timeout_fallback_max_consecutive", 3),
+            timeout_fallback_cooldown_moves=getattr(cfg.tournament.match, "timeout_fallback_cooldown_moves", 2),
+            include_time_control_in_prompt=getattr(cfg.tournament.match, "include_time_control_in_prompt", True),
         )
         with Spinner(f"Playing match (Variant {variant})"):
             local_result = asyncio.run(local_engine.play_match())
@@ -2838,9 +2843,9 @@ def _execute_llm_match_v2(config):
             
             termination = result.termination.value if hasattr(result.termination, 'value') else str(result.termination)
             
-            print(f"    {C.YELLOW}Result:{C.RESET} {result.result.value}")
-            print(f"    {C.YELLOW}Reason:{C.RESET} {termination}")
-            print(f"    {C.YELLOW}Moves played:{C.RESET} 0")
+            print(f"    {C.YELLOW}Result:{C.RESET} {C.CYAN}{result.result.value}{C.RESET}")
+            print(f"    {C.YELLOW}Reason:{C.RESET} {C.CYAN}{termination}{C.RESET}")
+            print(f"    {C.YELLOW}Moves played:{C.RESET} {C.CYAN}0{C.RESET}")
             
             # Show which player had issues
             if result.termination.value == "forfeit":
@@ -2872,8 +2877,8 @@ def _execute_llm_match_v2(config):
             
             if result.elo_change:
                 print()
-                print(f"  {C.BOLD}ELO Changes:{C.RESET}")
-                print(f"    {result.elo_change.summary}")
+                print(f"  {C.BOLD}{C.CYAN}ELO Changes:{C.RESET}")
+                print(f"    {C.CYAN}{result.elo_change.summary}{C.RESET}")
             
             return
         
@@ -2911,9 +2916,9 @@ def _execute_llm_match_v2(config):
         
         # Display results
         print()
-        print(f"  {C.BOLD}{'═' * 50}{C.RESET}")
-        print(f"  {C.BOLD}Match Result{C.RESET}")
-        print(f"  {C.BOLD}{'═' * 50}{C.RESET}")
+        print(f"  {C.CYAN}{C.BOLD}{'═' * 50}{C.RESET}")
+        print(f"  {C.CYAN}{C.BOLD}Match Result{C.RESET}")
+        print(f"  {C.CYAN}{C.BOLD}{'═' * 50}{C.RESET}")
         
         if result.result.value == "1-0":
             print(f"    Winner: {C.GREEN}{white_player.name} (White){C.RESET}")
@@ -2922,21 +2927,21 @@ def _execute_llm_match_v2(config):
         else:
             print(f"    Result: {C.YELLOW}Draw{C.RESET}")
         
-        print(f"    Result: {result.result.value}")
-        print(f"    Termination: {result.termination.value}")
+        print(f"    {C.YELLOW}Result:{C.RESET} {C.CYAN}{result.result.value}{C.RESET}")
+        print(f"    {C.YELLOW}Termination:{C.RESET} {C.CYAN}{result.termination.value}{C.RESET}")
         if result.termination.value == "forfeit" and getattr(result, "forfeit_cause", None) == "timeout":
             print(f"    {C.YELLOW}Note:{C.RESET} Forfeit caused by repeated move timeouts.")
-        print(f"    Moves: {result.total_moves}")
-        print(f"    Match time: {match_time:.1f}s")
+        print(f"    {C.YELLOW}Moves:{C.RESET} {C.CYAN}{result.total_moves}{C.RESET}")
+        print(f"    {C.YELLOW}Match time:{C.RESET} {C.CYAN}{match_time:.1f}s{C.RESET}")
         
         if analysis:
-            print(f"    Beauty score: {analysis.beauty_score:.1f}/100")
-            print(f"    Critical moments: {len(analysis.critical_moments)}")
+            print(f"    {C.YELLOW}Beauty score:{C.RESET} {C.MAGENTA}{analysis.beauty_score:.1f}/100{C.RESET}")
+            print(f"    {C.YELLOW}Critical moments:{C.RESET} {C.MAGENTA}{len(analysis.critical_moments)}{C.RESET}")
         
         if result.elo_change:
-            print(f"    ELO change: {result.elo_change.summary}")
+            print(f"    {C.YELLOW}ELO change:{C.RESET} {C.CYAN}{result.elo_change.summary}{C.RESET}")
         
-        print(f"    Total time: {elapsed:.1f}s")
+        print(f"    {C.YELLOW}Total time:{C.RESET} {C.CYAN}{elapsed:.1f}s{C.RESET}")
         cli_logger.info("run_id=%s mode=match stage=match_completed result=%s termination=%s moves=%d", run_id, result.result.value, result.termination.value, result.total_moves)
         
         # Export game using the unified exporter system

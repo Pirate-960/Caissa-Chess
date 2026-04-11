@@ -442,6 +442,35 @@ class TestMatchEnginePromptBuilding:
         prompt = engine._build_move_prompt(engine.white, is_retry=False)
         assert "Claude" in prompt  # Opponent name
 
+    def test_prompt_can_exclude_legal_moves(self):
+        """Prompt should omit legal move block when configured off."""
+        white = TournamentPlayer(name="W", provider=Mock())
+        black = TournamentPlayer(name="B", provider=Mock())
+        engine = MatchEngine(white, black, include_legal_moves_in_prompt=False)
+        prompt = engine._build_move_prompt(engine.white, is_retry=False)
+        assert "LEGAL MOVES:" not in prompt
+
+    def test_prompt_includes_time_control_context(self):
+        """Prompt should include selected time control context by default."""
+        white = TournamentPlayer(name="W", provider=Mock())
+        black = TournamentPlayer(name="B", provider=Mock())
+        engine = MatchEngine(white, black, time_control=TimeControl.BULLET)
+        prompt = engine._build_move_prompt(engine.white, is_retry=False)
+        assert "TIME CONTROL: bullet (5s per move)" in prompt
+
+    def test_prompt_can_exclude_time_control_context(self):
+        """Prompt should allow disabling time control context block."""
+        white = TournamentPlayer(name="W", provider=Mock())
+        black = TournamentPlayer(name="B", provider=Mock())
+        engine = MatchEngine(
+            white,
+            black,
+            time_control=TimeControl.BULLET,
+            include_time_control_in_prompt=False,
+        )
+        prompt = engine._build_move_prompt(engine.white, is_retry=False)
+        assert "TIME CONTROL:" not in prompt
+
 
 @pytest.mark.asyncio
 class TestMatchEngineAsync:
@@ -518,6 +547,71 @@ class TestMatchEngineAsync:
             assert result.result == GameResult.BLACK_WINS
             assert result.termination == TerminationReason.FORFEIT
             assert result.forfeit_cause == "timeout"
+
+        asyncio.run(run_test())
+
+    def test_timeout_uses_heuristic_fallback_when_enabled(self):
+        """Timeout should play heuristic legal move instead of forfeiting when enabled."""
+        async def run_test():
+            white = TournamentPlayer(name="White", provider=Mock())
+            black = TournamentPlayer(name="Black", provider=Mock())
+            engine = MatchEngine(
+                white,
+                black,
+                max_retries=3,
+                timeout_fallback_enabled=True,
+            )
+
+            with patch.object(engine, "_call_llm", side_effect=asyncio.TimeoutError):
+                result = await engine.play_match()
+
+            assert result.total_moves > 0
+            assert result.forfeit_cause is None
+            assert result.termination != TerminationReason.FORFEIT
+
+        asyncio.run(run_test())
+
+    def test_timeout_forfeit_when_fallback_disabled(self):
+        """Disabling fallback should preserve strict timeout-forfeit behavior."""
+        async def run_test():
+            white = TournamentPlayer(name="White", provider=Mock())
+            black = TournamentPlayer(name="Black", provider=Mock())
+            engine = MatchEngine(
+                white,
+                black,
+                max_retries=3,
+                timeout_fallback_enabled=False,
+            )
+
+            with patch.object(engine, "_call_llm", side_effect=asyncio.TimeoutError):
+                result = await engine.play_match()
+
+            assert result.result == GameResult.BLACK_WINS
+            assert result.termination == TerminationReason.FORFEIT
+            assert result.forfeit_cause == "timeout"
+
+        asyncio.run(run_test())
+
+    def test_timeout_cooldown_skips_llm_calls_after_repeated_fallbacks(self):
+        """After repeated timeout fallbacks, engine should skip LLM calls for cooldown moves."""
+        async def run_test():
+            white = TournamentPlayer(name="White", provider=Mock())
+            black = TournamentPlayer(name="Black", provider=Mock())
+            engine = MatchEngine(
+                white,
+                black,
+                max_moves=3,
+                timeout_fallback_enabled=True,
+                timeout_fallback_max_consecutive=1,
+                timeout_fallback_cooldown_moves=2,
+            )
+
+            with patch.object(engine, "_call_llm", side_effect=asyncio.TimeoutError) as mock_call:
+                result = await engine.play_match()
+
+            assert result.total_moves > 0
+            # Without cooldown this would be called for each half-move up to max limit.
+            assert mock_call.call_count < result.total_moves
 
         asyncio.run(run_test())
 

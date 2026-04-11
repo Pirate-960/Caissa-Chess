@@ -293,6 +293,7 @@ class TournamentAnalytics:
         self._provider_metrics: Dict[str, ProviderMetrics] = {}
         self._style_fingerprints: Dict[str, StyleFingerprint] = {}
         self._opening_stats: Dict[str, OpeningStats] = {}
+        logger.info("TournamentAnalytics initialized")
     
     def add_match(self, match: MatchResult):
         """
@@ -304,6 +305,13 @@ class TournamentAnalytics:
         self.matches.append(match)
         self.players[match.white.id] = match.white
         self.players[match.black.id] = match.black
+        logger.debug(
+            "Added match to analytics: %s (%s vs %s, result=%s)",
+            match.match_id,
+            match.white.name,
+            match.black.name,
+            match.result.value,
+        )
         
         # Update provider metrics
         self._update_provider_metrics(match)
@@ -379,9 +387,16 @@ class TournamentAnalytics:
         
         Analyzes games to detect playing patterns and tendencies.
         """
+        logger.info("Generating style fingerprints for %d players", len(self.players))
         for player_id, player in self.players.items():
             fingerprint = self._analyze_player_style(player)
             self._style_fingerprints[player_id] = fingerprint
+            logger.debug(
+                "Style fingerprint ready: %s -> %s (%d games)",
+                player.name,
+                fingerprint.primary_style.value,
+                fingerprint.games_analyzed,
+            )
         
         return self._style_fingerprints
     
@@ -534,6 +549,11 @@ class TournamentAnalytics:
         """Generate a comprehensive analytics report."""
         summary = self.get_tournament_summary()
         rankings = self.get_provider_ranking()
+        logger.info(
+            "Generating analytics report: games=%s providers=%d",
+            summary.get("total_games", 0),
+            len(rankings),
+        )
         
         lines = [
             "# Tournament Analytics Report",

@@ -66,3 +66,4 @@ logs/
 # Output - Experimental
 games/*
 tournaments/*
+prompts/*

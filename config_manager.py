@@ -388,6 +388,10 @@ class TournamentMatchConfig:
     allow_draws: bool = True
     shuffle_colors: bool = True
     detect_opening: bool = True
+    timeout_fallback_enabled: bool = True
+    timeout_fallback_max_consecutive: int = 3
+    timeout_fallback_cooldown_moves: int = 2
+    include_time_control_in_prompt: bool = True
 
 
 @dataclass

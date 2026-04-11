@@ -35,6 +35,7 @@ from log_manager import (
     get_session_id,
     is_llm_logging_enabled,
     get_log_dir,
+    get_console_handler,
 )
 
 
@@ -43,6 +44,7 @@ def _reset_log_manager():
     log_manager._setup_done = False
     log_manager._log_dir = None
     log_manager._llm_prompts_enabled = True
+    log_manager._console_handler = None
 
     # Clear all handlers from caissa.* loggers + root to avoid cross-test leaks
     root = logging.getLogger()
@@ -241,6 +243,15 @@ class TestSetupLogging(unittest.TestCase):
             and not isinstance(h, logging.FileHandler)
         ]
         self.assertEqual(len(stream_handlers), 0, "Quiet mode should have no console handler")
+        self.assertIsNone(get_console_handler())
+
+    def test_get_console_handler_for_normal(self):
+        """Normal verbosity should expose the managed console StreamHandler."""
+        setup_logging(log_dir=self.temp_dir, verbosity="normal")
+        console = get_console_handler()
+        self.assertIsNotNone(console)
+        self.assertIsInstance(console, logging.StreamHandler)
+        self.assertNotIsInstance(console, logging.FileHandler)
 
     def test_llm_loggers_no_propagate(self):
         """LLM call/error loggers should have propagate=False."""

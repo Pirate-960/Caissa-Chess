@@ -19,6 +19,16 @@ from typing import List, Tuple, Optional, Dict
 from dataclasses import dataclass
 
 
+class C:
+    """ANSI color codes for terminal output."""
+    RESET   = "\033[0m"
+    BOLD    = "\033[1m"
+    DIM     = "\033[2m"
+    YELLOW  = "\033[93m"
+    MAGENTA = "\033[95m"
+    CYAN    = "\033[96m"
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SMART PLAYER SELECTION
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -197,6 +207,7 @@ class MatchConfig:
     enable_analysis: bool = True
     enable_commentary: bool = True
     ab_test_enabled: bool = False
+    inject_legal_moves_in_prompt: bool = True
     output_dir: str = "games/matches/"
 
 
@@ -276,6 +287,7 @@ class ImprovedMatchBuilder:
             ("time_control", self._select_time_control),
             ("white_player", self._select_white_player),
             ("black_player", self._select_black_player),
+            ("unlimited_prompting", self._configure_unlimited_prompting),
             ("analysis", self._configure_analysis),
             ("ab_test", self._configure_ab_test),
             ("export", self._select_export_format),
@@ -329,6 +341,11 @@ class ImprovedMatchBuilder:
             return None, True
         
         self.config.time_control = time_controls[choice][0]
+        if self.config.time_control in ("bullet", "blitz", "rapid", "classical"):
+            print(f"\n  {C.YELLOW}{C.BOLD}⚠️  Timeout/Heuristics Warning{C.RESET}")
+            print(f"     {C.YELLOW}Short per-move clocks can trigger timeout fallback.{C.RESET}")
+            print(f"     {C.MAGENTA}When that happens, CAISSA may use heuristic moves{C.RESET} {C.DIM}(instead of LLM moves){C.RESET}")
+            print(f"     {C.CYAN}Control this via timeout fallback settings in caissa_config.yaml.{C.RESET}")
         return self.config.time_control, False
     
     def _select_white_player(self) -> Tuple[str, bool]:
@@ -420,6 +437,26 @@ class ImprovedMatchBuilder:
             self.config.enable_commentary = False
         
         return {"analysis": self.config.enable_analysis, "commentary": self.config.enable_commentary}, False
+
+    def _configure_unlimited_prompting(self) -> Tuple[bool, bool]:
+        """Configure legal-move injection behavior for unlimited time control."""
+        if self.config.time_control != "unlimited":
+            self.config.inject_legal_moves_in_prompt = True
+            return True, False
+
+        print("\n" + "=" * 60)
+        print("  🧠 STEP 4: Unlimited Mode Prompting")
+        print("=" * 60)
+        print("\n  Unlimited mode can optionally include legal moves in each prompt.")
+        print("    1. Include legal moves (safer parsing, larger prompts) [RECOMMENDED]")
+        print("    2. Do not include legal moves (leaner prompts, freer reasoning)")
+        print("    0. ← Back")
+
+        choice = self._prompt_with_back("Inject legal moves into prompts", default=1, min_val=1, max_val=2)
+        if choice == 0:
+            return False, True
+        self.config.inject_legal_moves_in_prompt = (choice == 1)
+        return self.config.inject_legal_moves_in_prompt, False
     
     def _select_export_format(self) -> Tuple[str, bool]:
         """Step 5: Select export format."""
@@ -473,6 +510,9 @@ class ImprovedMatchBuilder:
         print(f"\n  ⚪ White:         {self.config.white_provider}")
         print(f"  ⚫ Black:         {self.config.black_provider}")
         print(f"  ⏱️  Time Control:  {self.config.time_control}")
+        if self.config.time_control == "unlimited":
+            legal_moves_mode = "Enabled" if self.config.inject_legal_moves_in_prompt else "Disabled"
+            print(f"  🧠 Legal Moves:   {legal_moves_mode} (unlimited mode)")
         
         analysis_status = "Full Analysis + Commentary" if self.config.enable_commentary else \
                          "Analysis Only" if self.config.enable_analysis else \
@@ -628,6 +668,11 @@ class ImprovedTournamentBuilder:
             return None, True
         
         self.config.time_control = time_controls[choice][0]
+        if self.config.time_control in ("bullet", "blitz", "rapid", "classical"):
+            print(f"\n  {C.YELLOW}{C.BOLD}⚠️  Timeout/Heuristics Warning{C.RESET}")
+            print(f"     {C.YELLOW}Short per-move clocks can trigger timeout fallback.{C.RESET}")
+            print(f"     {C.MAGENTA}When that happens, CAISSA may use heuristic moves{C.RESET} {C.DIM}(instead of LLM moves){C.RESET}")
+            print(f"     {C.CYAN}Control this via timeout fallback settings in caissa_config.yaml.{C.RESET}")
         return self.config.time_control, False
     
     def _select_players(self) -> Tuple[List[str], bool]:

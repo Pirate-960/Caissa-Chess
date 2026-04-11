@@ -543,6 +543,7 @@ def discover_models(
         metadata (currently only populated for the Gemini provider).
     """
     provider_name = provider_name.lower().strip()
+    logger.info("Starting model discovery for provider=%s include_preview=%s", provider_name, include_preview)
 
     # ── Resolve credentials from env / config ────────────────────────────
     if provider_name == "openai":
@@ -550,10 +551,14 @@ def discover_models(
         if cfg:
             key = key or getattr(cfg.llm, "openai_api_key", None)
         if not key:
+            logger.warning("OpenAI model discovery skipped: missing OPENAI_API_KEY")
             return DiscoveryResult([], error="OPENAI_API_KEY not set.")
         try:
-            return DiscoveryResult(_discover_openai(key, include_preview))
+            result = DiscoveryResult(_discover_openai(key, include_preview))
+            logger.info("OpenAI model discovery complete: %d models", len(result.models))
+            return result
         except Exception as exc:
+            logger.error("OpenAI model discovery failed: %s", exc)
             return DiscoveryResult([], error=f"OpenAI discovery failed: {exc}")
 
     elif provider_name == "anthropic":
@@ -561,10 +566,14 @@ def discover_models(
         if cfg:
             key = key or getattr(cfg.llm, "anthropic_api_key", None)
         if not key:
+            logger.warning("Anthropic model discovery skipped: missing ANTHROPIC_API_KEY")
             return DiscoveryResult([], error="ANTHROPIC_API_KEY not set.")
         try:
-            return DiscoveryResult(_discover_anthropic(key, include_preview))
+            result = DiscoveryResult(_discover_anthropic(key, include_preview))
+            logger.info("Anthropic model discovery complete: %d models", len(result.models))
+            return result
         except Exception as exc:
+            logger.error("Anthropic model discovery failed: %s", exc)
             return DiscoveryResult([], error=f"Anthropic discovery failed: {exc}")
 
     elif provider_name == "gemini":
@@ -572,13 +581,20 @@ def discover_models(
         if cfg:
             key = key or getattr(cfg.llm, "google_api_key", None)
         if not key:
+            logger.warning("Gemini model discovery skipped: missing GOOGLE_API_KEY")
             return DiscoveryResult([], error="GOOGLE_API_KEY not set.")
         try:
             models, sdk_status, sdk_detail = _discover_gemini(key, include_preview)
+            logger.info(
+                "Gemini model discovery complete: %d models (sdk_status=%s)",
+                len(models),
+                sdk_status,
+            )
             return DiscoveryResult(
                 models, sdk_status=sdk_status, sdk_detail=sdk_detail,
             )
         except Exception as exc:
+            logger.error("Gemini model discovery failed: %s", exc)
             return DiscoveryResult([], error=f"Gemini discovery failed: {exc}")
 
     elif provider_name == "deepseek":
@@ -586,15 +602,19 @@ def discover_models(
         if cfg:
             key = key or getattr(cfg.llm, "deepseek_api_key", None)
         if not key:
+            logger.warning("DeepSeek model discovery skipped: missing DEEPSEEK_API_KEY")
             return DiscoveryResult([], error="DEEPSEEK_API_KEY not set.")
         try:
-            return DiscoveryResult(_discover_openai(
+            result = DiscoveryResult(_discover_openai(
                 key,
                 include_preview,
                 base_url="https://api.deepseek.com",
                 provider_label="deepseek",
             ))
+            logger.info("DeepSeek model discovery complete: %d models", len(result.models))
+            return result
         except Exception as exc:
+            logger.error("DeepSeek model discovery failed: %s", exc)
             return DiscoveryResult([], error=f"DeepSeek discovery failed: {exc}")
 
     elif provider_name == "ollama":
@@ -602,8 +622,11 @@ def discover_models(
         if cfg:
             url = getattr(cfg.llm, "ollama_base_url", None) or url
         try:
-            return DiscoveryResult(_discover_ollama(url))
+            result = DiscoveryResult(_discover_ollama(url))
+            logger.info("Ollama model discovery complete: %d models", len(result.models))
+            return result
         except Exception as exc:
+            logger.error("Ollama model discovery failed: %s", exc)
             return DiscoveryResult([], error=f"Ollama discovery failed (is Ollama running?): {exc}")
 
     elif provider_name == "azure":
@@ -615,15 +638,21 @@ def discover_models(
             endpoint = endpoint or getattr(cfg.llm, "azure_endpoint", None)
             ver = getattr(cfg.llm, "azure_api_version", None) or ver
         if not key:
+            logger.warning("Azure model discovery skipped: missing AZURE_OPENAI_API_KEY")
             return DiscoveryResult([], error="AZURE_OPENAI_API_KEY not set.")
         if not endpoint:
+            logger.warning("Azure model discovery skipped: missing AZURE_OPENAI_ENDPOINT")
             return DiscoveryResult([], error="AZURE_OPENAI_ENDPOINT not set.")
         try:
-            return DiscoveryResult(_discover_azure(key, endpoint, ver, include_preview))
+            result = DiscoveryResult(_discover_azure(key, endpoint, ver, include_preview))
+            logger.info("Azure model discovery complete: %d models", len(result.models))
+            return result
         except Exception as exc:
+            logger.error("Azure model discovery failed: %s", exc)
             return DiscoveryResult([], error=f"Azure discovery failed: {exc}")
 
     else:
+        logger.warning("Model discovery requested for unknown provider: %s", provider_name)
         return DiscoveryResult([], error=f"Unknown provider: '{provider_name}'.")
 
 

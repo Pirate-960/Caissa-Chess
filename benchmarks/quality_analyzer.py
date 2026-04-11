@@ -20,6 +20,7 @@ Scoring Dimensions:
 import re
 import sys
 import os
+import logging
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field, asdict
 from enum import Enum
@@ -33,6 +34,8 @@ try:
     from io import StringIO
 except ImportError:
     chess = None
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -225,6 +228,7 @@ class QualityAnalyzer:
             QualityReport with scores and analysis
         """
         report = QualityReport()
+        logger.debug("Starting quality analysis (input_length=%d)", len(pgn_or_moves or ""))
         
         # Parse the game
         game, moves, board = self._parse_game(pgn_or_moves)
@@ -232,6 +236,7 @@ class QualityAnalyzer:
         if not moves:
             report.warnings.append("No valid moves found")
             report.grade = "F"
+            logger.warning("Quality analysis failed: no valid moves found")
             return report
         
         report.move_count = len(moves)
@@ -251,6 +256,13 @@ class QualityAnalyzer:
         # Calculate overall score
         report.overall_score = self._calculate_overall(report.scores)
         report.grade = self._score_to_grade(report.overall_score)
+        logger.info(
+            "Quality analysis complete: moves=%d score=%.1f grade=%s opening=%s",
+            report.move_count,
+            report.overall_score,
+            report.grade,
+            report.detected_opening or "unknown",
+        )
         
         return report
     
@@ -568,6 +580,7 @@ class BatchQualityAnalyzer:
             Aggregate statistics and individual reports
         """
         reports = []
+        logger.info("Starting batch quality analysis for %d games", len(games))
         
         for game in games:
             try:
@@ -580,6 +593,7 @@ class BatchQualityAnalyzer:
         valid_reports = [r for r in reports if r.overall_score > 0]
         
         if not valid_reports:
+            logger.warning("Batch quality analysis produced no valid reports")
             return {
                 "total_games": len(games),
                 "valid_games": 0,
@@ -597,7 +611,7 @@ class BatchQualityAnalyzer:
         for grade in grades:
             grade_dist[grade] = grade_dist.get(grade, 0) + 1
         
-        return {
+        result = {
             "total_games": len(games),
             "valid_games": len(valid_reports),
             "average_score": statistics.mean(scores),
@@ -609,6 +623,13 @@ class BatchQualityAnalyzer:
             "dimension_averages": self._dimension_averages(valid_reports),
             "reports": [r.to_dict() for r in reports],
         }
+        logger.info(
+            "Batch quality analysis complete: valid=%d/%d avg=%.1f",
+            result["valid_games"],
+            result["total_games"],
+            result["average_score"],
+        )
+        return result
     
     def _dimension_averages(self, reports: List[QualityReport]) -> Dict[str, float]:
         """Calculate average scores per dimension."""

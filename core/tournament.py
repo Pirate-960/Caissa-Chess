@@ -22,6 +22,7 @@ from typing import Optional, List, Tuple, Dict, Any, Set
 from core.tournament_player import TournamentPlayer, TimeControl, PlayerStatus
 from core.match_engine import MatchEngine, MatchResult
 from core.elo_calculator import GameResult, EloLeaderboard
+from config_manager import cfg
 
 
 logger = logging.getLogger(__name__)
@@ -729,6 +730,10 @@ class Tournament:
             time_control=self.config.time_control,
             max_moves=self.config.max_moves,
             starting_fen=starting_fen,
+            timeout_fallback_enabled=getattr(cfg.tournament.match, "timeout_fallback_enabled", True),
+            timeout_fallback_max_consecutive=getattr(cfg.tournament.match, "timeout_fallback_max_consecutive", 3),
+            timeout_fallback_cooldown_moves=getattr(cfg.tournament.match, "timeout_fallback_cooldown_moves", 2),
+            include_time_control_in_prompt=getattr(cfg.tournament.match, "include_time_control_in_prompt", True),
         )
         
         result = await engine.play_match()

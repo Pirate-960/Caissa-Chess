@@ -203,6 +203,27 @@ caissa arena --players gpt4,claude --duration 30m --time bullet
 caissa match --white gpt4 --black claude --time classical
 ```
 
+### Timeout Fallback Toggle (New)
+
+You can globally control whether timed-out LLM moves use heuristic fallback or keep strict timeout-forfeit behavior.
+
+```yaml
+tournament:
+  match:
+    timeout_fallback_enabled: true
+    timeout_fallback_max_consecutive: 3
+    timeout_fallback_cooldown_moves: 2
+    include_time_control_in_prompt: true
+```
+
+- `true`: on timeout, engine picks a legal heuristic move and continues.
+- `false`: preserves strict behavior (timeouts can lead to forfeit after retries).
+- `timeout_fallback_max_consecutive`: consecutive timeout-fallbacks before cooldown starts.
+- `timeout_fallback_cooldown_moves`: turns to skip LLM calls (heuristics only) once cooldown triggers.
+- `include_time_control_in_prompt`: inject selected time control into move prompt to encourage concise responses.
+
+> **Compatibility note:** This is additive. Existing tournament/match behavior is preserved when you keep the default.
+
 ---
 
 ## Player Configuration

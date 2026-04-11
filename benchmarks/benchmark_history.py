@@ -20,12 +20,14 @@ Usage:
 import os
 import json
 import hashlib
+import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 import statistics
 
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # DATA CLASSES
@@ -171,8 +173,9 @@ class BenchmarkHistory:
                 with open(self.db_path) as f:
                     data = json.load(f)
                 self._records = [BenchmarkRecord.from_dict(r) for r in data.get("records", [])]
+                logger.info("Loaded benchmark history: %d records", len(self._records))
             except (json.JSONDecodeError, KeyError) as e:
-                print(f"Warning: Could not load history: {e}")
+                logger.warning("Could not load benchmark history: %s", e)
                 self._records = []
         else:
             self._records = []
@@ -191,6 +194,7 @@ class BenchmarkHistory:
         
         with open(self.db_path, "w") as f:
             json.dump(data, f, indent=2)
+        logger.debug("Saved benchmark history: %d records", len(self._records))
     
     def save(self, result: Dict[str, Any], prompt_type: str = "chess_short") -> BenchmarkRecord:
         """
@@ -206,6 +210,12 @@ class BenchmarkHistory:
         record = BenchmarkRecord.from_benchmark_result(result, prompt_type)
         self._records.append(record)
         self._save()
+        logger.info(
+            "Saved benchmark record: provider=%s model=%s id=%s",
+            record.provider,
+            record.model,
+            record.id,
+        )
         return record
     
     def save_suite(self, suite: Dict[str, Any], prompt_type: str = "chess_short") -> List[BenchmarkRecord]:
@@ -278,6 +288,13 @@ class BenchmarkHistory:
             TrendData with analysis, or None if insufficient data
         """
         records = self.get_records(provider=provider, model=model, days=days)
+        logger.debug(
+            "Computing trends for provider=%s model=%s days=%d records=%d",
+            provider,
+            model or "*",
+            days,
+            len(records),
+        )
         
         if len(records) < 2:
             return None
@@ -352,6 +369,7 @@ class BenchmarkHistory:
             List of regression alerts
         """
         alerts = []
+        logger.info("Detecting regressions with threshold=%.1f%%", threshold_percent)
         providers = set(r.provider for r in self._records)
         
         for provider in providers:
@@ -423,6 +441,7 @@ class BenchmarkHistory:
         # Sort by severity
         severity_order = {"high": 0, "medium": 1, "low": 2}
         alerts.sort(key=lambda a: severity_order.get(a.severity, 3))
+        logger.info("Regression detection complete: %d alerts", len(alerts))
         
         return alerts
     

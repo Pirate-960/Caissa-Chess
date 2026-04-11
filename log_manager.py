@@ -59,6 +59,7 @@ _setup_done = False
 _setup_lock = threading.Lock()
 _log_dir: Optional[Path] = None
 _llm_prompts_enabled: bool = True
+_console_handler: Optional[logging.StreamHandler] = None
 
 
 # ─── Formatters ─────────────────────────────────────────────────────────────
@@ -171,7 +172,7 @@ def setup_logging(
     **Call once** at application startup before any logging occurs.
     Subsequent calls are safe no-ops.
     """
-    global _setup_done, _log_dir, _llm_prompts_enabled
+    global _setup_done, _log_dir, _llm_prompts_enabled, _console_handler
 
     with _setup_lock:
         if _setup_done:
@@ -206,6 +207,7 @@ def setup_logging(
         root.addHandler(master_handler)
 
         # ── 1b. Root logger → console (stderr) ──────────────────────
+        _console_handler = None
         if console_logs:
             console_level = _VERBOSITY_LEVELS.get(verbosity.lower(), logging.INFO)
             if console_level < logging.CRITICAL:      # "quiet" → no handler
@@ -213,6 +215,7 @@ def setup_logging(
                 console.setLevel(console_level)
                 console.setFormatter(logging.Formatter(_CONSOLE_FMT))
                 root.addHandler(console)
+                _console_handler = console
 
         # ── 2. Category loggers (caissa.*) ───────────────────────────
         for category, cat_info in LOG_CATEGORIES.items():
@@ -317,6 +320,11 @@ def is_llm_logging_enabled() -> bool:
 def get_log_dir() -> Optional[Path]:
     """Return the resolved log directory path, or ``None`` if not set up."""
     return _log_dir
+
+
+def get_console_handler() -> Optional[logging.StreamHandler]:
+    """Return the console StreamHandler managed by setup_logging(), if any."""
+    return _console_handler
 
 
 # ─── Private auto-setup ────────────────────────────────────────────────────

@@ -38,6 +38,8 @@ import logging
 # Add parent directory for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from log_manager import setup_logging
+
 # Handlers are wired by log_manager.setup_logging()
 logger = logging.getLogger(__name__)
 
@@ -437,9 +439,14 @@ def main():
     )
     
     args = parser.parse_args()
-    
-    if args.quiet:
-        logging.getLogger().setLevel(logging.WARNING)
+
+    # Single logging authority: configure once via log_manager.
+    setup_logging(
+        log_dir="logs",
+        level="INFO",
+        verbosity="quiet" if args.quiet else "normal",
+        console_logs=True,
+    )
     
     # Determine providers
     if args.all:

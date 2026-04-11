@@ -200,6 +200,7 @@ class LiveCommentator:
         """Set the player names for personalized commentary."""
         self.white_name = white_name
         self.black_name = black_name
+        logger.debug("Commentator players set: white=%s black=%s", white_name, black_name)
     
     def reset(self):
         """Reset state for a new game."""
@@ -208,6 +209,7 @@ class LiveCommentator:
         self.predictions = []
         self.eval_history = []
         self.game_context = {}
+        logger.debug("Commentator state reset")
     
     async def comment_on_move(
         self,
@@ -232,6 +234,7 @@ class LiveCommentator:
         """
         move_num = board.fullmove_number
         san = board.san(move) if move in board.legal_moves else str(move)
+        logger.debug("Generating commentary for move %s (move_num=%d)", san, move_num)
         
         # Build the commentary prompt
         prompt = self._build_move_prompt(
@@ -257,6 +260,12 @@ class LiveCommentator:
                         description=comment,
                     )
                     self.critical_moments.append(moment)
+                    logger.info(
+                        "Critical commentary moment detected at move %d (%s), eval swing=%.2f",
+                        move_num,
+                        san,
+                        swing,
+                    )
             
             return comment
         

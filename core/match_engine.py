@@ -239,6 +239,11 @@ class MatchEngine:
         prompt_variant: str = "A",
         prompt_trace: Optional[Dict[str, Any]] = None,
         system_prompt_override: Optional[str] = None,
+        include_legal_moves_in_prompt: bool = True,
+        timeout_fallback_enabled: bool = False,
+        timeout_fallback_max_consecutive: int = 3,
+        timeout_fallback_cooldown_moves: int = 2,
+        include_time_control_in_prompt: bool = True,
     ):
         """
         Initialize the match engine.
@@ -268,6 +273,11 @@ class MatchEngine:
         self.prompt_variant = prompt_variant
         self.prompt_trace = dict(prompt_trace or {})
         self.system_prompt_override = system_prompt_override
+        self.include_legal_moves_in_prompt = include_legal_moves_in_prompt
+        self.timeout_fallback_enabled = timeout_fallback_enabled
+        self.timeout_fallback_max_consecutive = max(1, timeout_fallback_max_consecutive)
+        self.timeout_fallback_cooldown_moves = max(0, timeout_fallback_cooldown_moves)
+        self.include_time_control_in_prompt = include_time_control_in_prompt
         
         # Game state
         self.board = chess.Board(starting_fen)
@@ -279,6 +289,10 @@ class MatchEngine:
         self.black_illegal_attempts = 0
         self.white_think_time = 0.0
         self.black_think_time = 0.0
+        self.white_timeout_fallback_streak = 0
+        self.black_timeout_fallback_streak = 0
+        self.white_llm_cooldown_remaining = 0
+        self.black_llm_cooldown_remaining = 0
         
         # Validation
         self.validator = LegalityValidator()
@@ -457,6 +471,7 @@ class MatchEngine:
         """
         move_number = self.board.fullmove_number
         fen_before = self.board.fen()
+        in_cooldown = self._is_llm_cooldown_active(color)
         
         logger.debug(f"[{self.match_id}] Getting move from {player.name} ({color}), move {move_number}")
         
@@ -469,6 +484,22 @@ class MatchEngine:
                 
                 if attempt > 1:
                     logger.warning(f"[{self.match_id}] {player.name} retry attempt {attempt}/{self.max_retries} for move {move_number}")
+                
+                # During cooldown, skip LLM call and use heuristic directly.
+                if in_cooldown:
+                    think_time = time.time() - start_time
+                    logger.warning(
+                        f"[{self.match_id}] {player.name} is in timeout cooldown; skipping LLM call and using heuristic move"
+                    )
+                    self._consume_llm_cooldown_turn(color)
+                    return self._build_fallback_move_record(
+                        player=player,
+                        color=color,
+                        move_number=move_number,
+                        fen_before=fen_before,
+                        think_time=think_time,
+                        attempt=attempt,
+                    ), None
                 
                 # Get response from LLM
                 logger.debug(f"[{self.match_id}] Calling LLM for {player.name} (move {move_number}, attempt {attempt})")
@@ -508,6 +539,7 @@ class MatchEngine:
                 
                 logger.debug(f"[{self.match_id}] {player.name} - Valid move: {san} ({think_time:.2f}s, attempt {attempt})")
                 logger.info(f"[{self.match_id}] ✅ VALIDATION PASSED - {player.name} ({color}) plays {san}")
+                self._reset_timeout_fallback_streak(color)
                 
                 self.board.push(move)
                 
@@ -528,6 +560,19 @@ class MatchEngine:
             
             except asyncio.TimeoutError:
                 think_time = time.time() - start_time
+                if self.timeout_fallback_enabled:
+                    self._record_timeout_fallback(color)
+                    logger.warning(
+                        f"[{self.match_id}] {player.name} move {move_number} timed out; using heuristic fallback move"
+                    )
+                    return self._build_fallback_move_record(
+                        player=player,
+                        color=color,
+                        move_number=move_number,
+                        fen_before=fen_before,
+                        think_time=think_time,
+                        attempt=attempt,
+                    ), None
                 logger.info(
                     f"[{self.match_id}] {player.name} move {move_number} exceeded time limit "
                     f"({think_time:.1f}s > {self.time_control.value}s), attempt {attempt}/{self.max_retries}"
@@ -580,11 +625,13 @@ class MatchEngine:
         
         history = " ".join(history_lines) if history_lines else "(Game start)"
         
-        # Legal moves
-        legal_moves = [self.board.san(m) for m in self.board.legal_moves]
-        legal_moves_str = ", ".join(sorted(legal_moves)[:30])  # Limit for context
-        if len(legal_moves) > 30:
-            legal_moves_str += f" ... ({len(legal_moves)} total)"
+        legal_moves_block = ""
+        if self.include_legal_moves_in_prompt:
+            legal_moves = [self.board.san(m) for m in self.board.legal_moves]
+            legal_moves_str = ", ".join(sorted(legal_moves)[:30])  # Limit for context
+            if len(legal_moves) > 30:
+                legal_moves_str += f" ... ({len(legal_moves)} total)"
+            legal_moves_block = f"LEGAL MOVES: {legal_moves_str}\n"
         
         # Persona
         persona_text = ""
@@ -594,6 +641,13 @@ class MatchEngine:
         # Opponent info
         opponent = self.black if self.board.turn == chess.WHITE else self.white
         opponent_color = "Black" if self.board.turn == chess.WHITE else "White"
+        time_control_line = ""
+        if self.include_time_control_in_prompt:
+            tc_name = self.time_control.name.lower()
+            if self.time_control.value > 0:
+                time_control_line = f"TIME CONTROL: {tc_name} ({self.time_control.value}s per move)\n"
+            else:
+                time_control_line = f"TIME CONTROL: {tc_name} (no per-move limit)\n"
         
         # Build prompt
         prompt = f"""You are playing a chess game as {color}.
@@ -602,11 +656,12 @@ CURRENT POSITION (FEN): {self.board.fen()}
 
 MOVE HISTORY: {history}
 
+{time_control_line}
 MOVE NUMBER: {move_number}
 YOUR COLOR: {color}
 OPPONENT: {opponent.name} ({opponent_color})
 
-LEGAL MOVES: {legal_moves_str}
+{legal_moves_block}
 {persona_text}
 
 {"IMPORTANT: Your previous move was ILLEGAL. Please carefully check the legal moves list and respond with a VALID move." if is_retry else ""}
@@ -735,6 +790,112 @@ No explanations, no commentary. Just the move."""
             return response
         
         return None
+
+    def _select_timeout_fallback_move(self) -> chess.Move:
+        """Select a legal fallback move when move generation times out."""
+        legal_moves = list(self.board.legal_moves)
+        if not legal_moves:
+            raise RuntimeError("No legal moves available for timeout fallback")
+
+        piece_values = {
+            chess.PAWN: 1,
+            chess.KNIGHT: 3,
+            chess.BISHOP: 3,
+            chess.ROOK: 5,
+            chess.QUEEN: 9,
+            chess.KING: 0,
+        }
+
+        for move in legal_moves:
+            self.board.push(move)
+            is_mate = self.board.is_checkmate()
+            self.board.pop()
+            if is_mate:
+                return move
+
+        def score_move(move: chess.Move) -> float:
+            score = 0.0
+            if move.promotion:
+                score += 10.0 + piece_values.get(move.promotion, 0)
+            if self.board.gives_check(move):
+                score += 2.0
+            if self.board.is_capture(move):
+                captured = self.board.piece_at(move.to_square)
+                attacker = self.board.piece_at(move.from_square)
+                captured_val = piece_values.get(captured.piece_type, 0) if captured else 0
+                attacker_val = piece_values.get(attacker.piece_type, 0) if attacker else 0
+                score += 4.0 + captured_val - (0.2 * attacker_val)
+            to_file = chess.square_file(move.to_square)
+            to_rank = chess.square_rank(move.to_square)
+            center_dist = abs(to_file - 3.5) + abs(to_rank - 3.5)
+            score += max(0.0, 2.5 - 0.5 * center_dist)
+            return score
+
+        return max(legal_moves, key=score_move)
+
+    def _build_fallback_move_record(
+        self,
+        player: TournamentPlayer,
+        color: str,
+        move_number: int,
+        fen_before: str,
+        think_time: float,
+        attempt: int,
+    ) -> MoveRecord:
+        fallback_move = self._select_timeout_fallback_move()
+        san = self.board.san(fallback_move)
+        uci = fallback_move.uci()
+        is_check = self.board.gives_check(fallback_move)
+        is_capture = self.board.is_capture(fallback_move)
+        is_promotion = fallback_move.promotion is not None
+        self.board.push(fallback_move)
+        return MoveRecord(
+            move_number=move_number,
+            player=player.id,
+            color=color,
+            san=san,
+            uci=uci,
+            fen_before=fen_before,
+            fen_after=self.board.fen(),
+            think_time=think_time,
+            attempt=attempt,
+            is_check=is_check,
+            is_capture=is_capture,
+            is_promotion=is_promotion,
+        )
+
+    def _record_timeout_fallback(self, color: str):
+        if color == "white":
+            self.white_timeout_fallback_streak += 1
+            if self.white_timeout_fallback_streak >= self.timeout_fallback_max_consecutive:
+                self.white_llm_cooldown_remaining = max(
+                    self.white_llm_cooldown_remaining,
+                    self.timeout_fallback_cooldown_moves,
+                )
+        else:
+            self.black_timeout_fallback_streak += 1
+            if self.black_timeout_fallback_streak >= self.timeout_fallback_max_consecutive:
+                self.black_llm_cooldown_remaining = max(
+                    self.black_llm_cooldown_remaining,
+                    self.timeout_fallback_cooldown_moves,
+                )
+
+    def _reset_timeout_fallback_streak(self, color: str):
+        if color == "white":
+            self.white_timeout_fallback_streak = 0
+        else:
+            self.black_timeout_fallback_streak = 0
+
+    def _is_llm_cooldown_active(self, color: str) -> bool:
+        if color == "white":
+            return self.white_llm_cooldown_remaining > 0
+        return self.black_llm_cooldown_remaining > 0
+
+    def _consume_llm_cooldown_turn(self, color: str):
+        if color == "white":
+            self.white_llm_cooldown_remaining = max(0, self.white_llm_cooldown_remaining - 1)
+        else:
+            self.black_llm_cooldown_remaining = max(0, self.black_llm_cooldown_remaining - 1)
     
     def _looks_like_move(self, text: str) -> bool:
         """Check if text looks like a valid move."""
